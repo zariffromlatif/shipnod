@@ -8,7 +8,9 @@ import { COURIER_IDS, ORDER_STATUSES, type OrderInput } from '../domain/types.js
 import { mapShopifyOrder, verifyShopifySignature } from '../integrations/shopify.js';
 import { mapWooOrder, verifyWooSignature } from '../integrations/woocommerce.js';
 import { AppError } from '../lib/errors.js';
+import type { AuthService } from '../services/auth.js';
 import type { ShipnodService } from '../services/shipnod.js';
+import { createDashboard } from './dashboard/routes.js';
 import { confirmationPage, notFoundPage } from './pages.js';
 
 type Env = { Variables: { seller: Seller } };
@@ -94,7 +96,14 @@ async function jsonBody<T extends z.ZodTypeAny>(c: Context, schema: T): Promise<
   return schema.parse(raw);
 }
 
-export function createApp(service: ShipnodService): Hono<Env> {
+export interface AppOptions {
+  publicBaseUrl: string;
+  /** Secure session cookies; true in production (HTTPS). */
+  secureCookies: boolean;
+  now?: () => Date;
+}
+
+export function createApp(service: ShipnodService, auth: AuthService, opts: AppOptions): Hono<Env> {
   const app = new Hono<Env>();
   const landing = loadLanding();
 
@@ -274,6 +283,7 @@ export function createApp(service: ShipnodService): Hono<Env> {
   api.get('/usage', (c) => c.json(service.usage(c.get('seller'))));
 
   app.route('/v1', api);
+  app.route('/app', createDashboard(service, auth, opts));
   return app;
 }
 

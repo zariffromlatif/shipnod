@@ -6,6 +6,7 @@ import type { SmsLanguage } from '../confirmation/messages.js';
 import type {
   CourierId,
   DeliveryHistory,
+  RiskLevel,
   DeliveryOutcome,
   Order,
   OrderItem,
@@ -42,6 +43,27 @@ export type SellerPatch = Partial<Omit<Seller, 'id' | 'createdAt'>>;
 
 export interface StoredOrder extends Order {
   phoneHash: string | null;
+}
+
+export interface OrderListOptions {
+  /** Single status (kept for the API); ignored when `statuses` is given. */
+  status?: OrderStatus;
+  statuses?: readonly OrderStatus[];
+  level?: RiskLevel;
+  /** Matches phone, customer name or order id. */
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface LoginCodeRow {
+  id: number;
+  sellerId: string;
+  codeHash: string;
+  attempts: number;
+  createdAt: string;
+  expiresAt: string;
+  usedAt: string | null;
 }
 
 export type OrderPatch = Partial<
@@ -236,6 +258,11 @@ export class Store {
     return r ? sellerFromRow(r) : null;
   }
 
+  getSellerByPhone(phone: string): Seller | null {
+    const r = this.db.prepare('SELECT * FROM sellers WHERE phone = ?').get(phone) as Row | undefined;
+    return r ? sellerFromRow(r) : null;
+  }
+
   getSellerByApiKeyHash(hash: string): Seller | null {
     const r = this.db.prepare('SELECT * FROM sellers WHERE api_key_hash = ?').get(hash) as Row | undefined;
     return r ? sellerFromRow(r) : null;
@@ -312,16 +339,28 @@ export class Store {
     return r ? orderFromRow(r) : null;
   }
 
-  listOrders(sellerId: string, opts: { status?: OrderStatus; limit?: number; offset?: number } = {}): StoredOrder[] {
+  listOrders(sellerId: string, opts: OrderListOptions = {}): StoredOrder[] {
     const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
     const offset = Math.max(opts.offset ?? 0, 0);
-    const rows = opts.status
-      ? this.db
-          .prepare('SELECT * FROM orders WHERE seller_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
-          .all(sellerId, opts.status, limit, offset)
-      : this.db
-          .prepare('SELECT * FROM orders WHERE seller_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
-          .all(sellerId, limit, offset);
+    const where = ['seller_id = ?'];
+    const params: SQLInputValue[] = [sellerId];
+    const statuses = opts.statuses ?? (opts.status ? [opts.status] : []);
+    if (statuses.length > 0) {
+      where.push(`status IN (${statuses.map(() => '?').join(', ')})`);
+      params.push(...statuses);
+    }
+    if (opts.level) {
+      where.push(`json_extract(risk_json, '$.level') = ?`);
+      params.push(opts.level);
+    }
+    if (opts.search) {
+      const like = `%${opts.search.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+      where.push(`(phone LIKE ? ESCAPE '\\' OR customer_name LIKE ? ESCAPE '\\' OR id LIKE ? ESCAPE '\\')`);
+      params.push(like, like, like);
+    }
+    const rows = this.db
+      .prepare(`SELECT * FROM orders WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`)
+      .all(...params, limit, offset);
     return (rows as Row[]).map(orderFromRow);
   }
 
@@ -439,13 +478,26 @@ export class Store {
 
   // -------------------------------------------------------------- blocklist
 
-  block(sellerId: string, phoneHash: string, reason: string | null): void {
+  block(sellerId: string, phoneHash: string, reason: string | null, phoneMasked: string | null = null): void {
     this.db
       .prepare(
-        `INSERT INTO blocklist (seller_id, phone_hash, reason, created_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (seller_id, phone_hash) DO UPDATE SET reason = excluded.reason`,
+        `INSERT INTO blocklist (seller_id, phone_hash, reason, created_at, phone_masked) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (seller_id, phone_hash) DO UPDATE SET reason = excluded.reason,
+           phone_masked = COALESCE(excluded.phone_masked, phone_masked)`,
       )
-      .run(sellerId, phoneHash, reason, new Date().toISOString());
+      .run(sellerId, phoneHash, reason, new Date().toISOString(), phoneMasked);
+  }
+
+  listBlocklist(sellerId: string): Array<{ phoneHash: string; phoneMasked: string | null; reason: string | null; createdAt: string }> {
+    const rows = this.db
+      .prepare('SELECT * FROM blocklist WHERE seller_id = ? ORDER BY created_at DESC')
+      .all(sellerId) as Row[];
+    return rows.map((r) => ({
+      phoneHash: str(r.phone_hash),
+      phoneMasked: strOrNull(r.phone_masked),
+      reason: strOrNull(r.reason),
+      createdAt: str(r.created_at),
+    }));
   }
 
   unblock(sellerId: string, phoneHash: string): boolean {
@@ -522,5 +574,67 @@ export class Store {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(e.sellerId, e.orderId, e.to, e.text, e.segments, e.ok ? 1 : 0, e.providerMessageId ?? null, e.error ?? null, new Date().toISOString());
+  }
+
+  // --------------------------------------------------------------- sessions
+
+  createSession(tokenHash: string, sellerId: string, createdAt: string, expiresAt: string): void {
+    this.db
+      .prepare('INSERT INTO sessions (token_hash, seller_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
+      .run(tokenHash, sellerId, createdAt, expiresAt);
+  }
+
+  getSessionSellerId(tokenHash: string, nowIso: string): string | null {
+    const r = this.db
+      .prepare('SELECT seller_id FROM sessions WHERE token_hash = ? AND expires_at > ?')
+      .get(tokenHash, nowIso) as Row | undefined;
+    return r ? str(r.seller_id) : null;
+  }
+
+  deleteSession(tokenHash: string): void {
+    this.db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash);
+  }
+
+  deleteExpiredSessions(nowIso: string): number {
+    return Number(this.db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(nowIso).changes);
+  }
+
+  // ------------------------------------------------------------ login codes
+
+  createLoginCode(e: { sellerId: string; codeHash: string; createdAt: string; expiresAt: string }): void {
+    this.db
+      .prepare('INSERT INTO login_codes (seller_id, code_hash, created_at, expires_at) VALUES (?, ?, ?, ?)')
+      .run(e.sellerId, e.codeHash, e.createdAt, e.expiresAt);
+  }
+
+  latestLoginCode(sellerId: string): LoginCodeRow | null {
+    const r = this.db
+      .prepare('SELECT * FROM login_codes WHERE seller_id = ? ORDER BY id DESC LIMIT 1')
+      .get(sellerId) as Row | undefined;
+    if (!r) return null;
+    return {
+      id: Number(r.id),
+      sellerId: str(r.seller_id),
+      codeHash: str(r.code_hash),
+      attempts: Number(r.attempts),
+      createdAt: str(r.created_at),
+      expiresAt: str(r.expires_at),
+      usedAt: strOrNull(r.used_at),
+    };
+  }
+
+  countLoginCodesSince(sellerId: string, sinceIso: string): number {
+    const r = this.db
+      .prepare('SELECT COUNT(*) AS n FROM login_codes WHERE seller_id = ? AND created_at >= ?')
+      .get(sellerId, sinceIso) as Row;
+    return Number(r.n);
+  }
+
+  recordLoginAttempt(id: number): void {
+    this.db.prepare('UPDATE login_codes SET attempts = attempts + 1 WHERE id = ?').run(id);
+  }
+
+  markLoginCodeUsed(id: number, usedAt: string): void {
+    this.db.prepare('UPDATE login_codes SET used_at = ? WHERE id = ?').run(usedAt, id);
   }
 }

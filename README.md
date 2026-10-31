@@ -46,7 +46,7 @@ Requires Node.js ≥ 22.13 (uses the built-in `node:sqlite`; there are no native
 ```bash
 npm install
 cp .env.example .env            # dev defaults work as-is
-npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth
+npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --phone 01712345678
 npm run dev                     # http://localhost:8787
 ```
 
@@ -61,8 +61,27 @@ curl -X POST localhost:8787/v1/orders \
 
 The console prints the confirmation SMS. Open its link to see the customer's page.
 
+### Seller dashboard
+
+Sellers work in a Bangla, mobile-first dashboard at **`/app`**. They log in with their phone number and a 6-digit SMS code. To get a filled-in shop for a demo or for UI work:
+
 ```bash
-npm test          # 69 tests: risk engine, adapters, webhooks, full API loop
+DATABASE_PATH=./data/demo.db npm run seed:demo
+DATABASE_PATH=./data/demo.db npm run dev
+# open http://localhost:8787/app/login and enter 01700000000. The login code is printed in this terminal.
+```
+
+| Page | What sellers do there |
+|------|-----------------------|
+| Overview `/app` | Estimated taka saved, RTO rate, to-do counts (held, to book, awaiting advance, awaiting the customer), monthly usage, quick customer check, recent orders |
+| Orders `/app/orders` | Tabs by stage, filter by risk level, search by name, number (any format, including Bangla digits) or order id |
+| Order `/app/orders/:id` | Why it was flagged (each reason with its points), confirm / advance received / hold / cancel, resend SMS, book a courier, record delivered or returned, full timeline |
+| New order `/app/orders/new` | Type in an order from Facebook or a phone call. It is scored and acted on as it is saved |
+| Customer check `/app/check` | Look up a number before taking the order |
+| Settings `/app/settings` | Shop name, SMS language with a cost preview, bKash number and advance fee, auto-booking, risk thresholds (Growth+), courier accounts, webhook URLs, blocklist, plan usage |
+
+```bash
+npm test          # 85 tests: risk engine, adapters, webhooks, API loop, dashboard
 npm run typecheck
 npm run build && npm start
 ```

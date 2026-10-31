@@ -1,43 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ConsoleSmsProvider } from '../src/confirmation/sms.js';
-import { Store } from '../src/db/store.js';
-import { createApp } from '../src/http/app.js';
-import { SecretBox, signBase64Hmac } from '../src/lib/crypto.js';
-import { ShipnodService } from '../src/services/shipnod.js';
+import { signBase64Hmac } from '../src/lib/crypto.js';
 import type { PlanId } from '../src/billing/plans.js';
+import { createHarness } from './helpers.js';
 
 const ADDRESS = 'House 12, Road 5, Dhanmondi, Dhaka';
 
 function setup() {
-  const store = new Store(':memory:');
-  const sms = new ConsoleSmsProvider(true);
-  let deliveryStatus = 'pending';
-  const courierCalls: string[] = [];
-  const fakeFetch = (async (input: Parameters<typeof fetch>[0]) => {
-    const url = String(input);
-    courierCalls.push(url);
-    if (url.endsWith('/create_order')) {
-      return Response.json({ status: 200, consignment: { consignment_id: 987, tracking_code: 'SF987', status: 'in_review' } });
-    }
-    if (url.includes('/status_by_cid/')) return Response.json({ status: 200, delivery_status: deliveryStatus });
-    return new Response('not found', { status: 404 });
-  }) as typeof fetch;
-
-  const clock = { now: new Date() };
-  clock.now.setUTCHours(8, 0, 0, 0); // 14:00 in Dhaka: keeps LATE_NIGHT out of the scores
-
-  const service = new ShipnodService({
-    store,
-    sms,
-    secretBox: new SecretBox('cd'.repeat(32)),
-    networkHashSecret: 'test-network-secret-at-least-32-characters',
-    publicBaseUrl: 'https://nsc.test',
-    confirmTtlHours: 48,
-    courierSandbox: true,
-    fetch: fakeFetch,
-    now: () => clock.now,
-  });
-  const app = createApp(service);
+  const { store, sms, service, app, clock, courier } = createHarness();
+  const courierCalls = courier.calls;
 
   const sellerClient = (plan: PlanId, shopName = 'Rahim Fashion') => {
     const { seller, apiKey } = service.createSeller({ name: 'Owner', shopName, plan });
@@ -84,7 +54,7 @@ function setup() {
     order,
     lastCode,
     customer,
-    setDelivery: (s: string) => (deliveryStatus = s),
+    setDelivery: (s: string) => (courier.deliveryStatus = s),
   };
 }
 

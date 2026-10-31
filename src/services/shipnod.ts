@@ -3,9 +3,9 @@ import { advancePaymentSms, confirmationSms, type SmsLanguage } from '../confirm
 import type { SmsProvider } from '../confirmation/sms.js';
 import { courierCredentialSchemas, createCourierAdapter } from '../couriers/registry.js';
 import { CourierApiError, type CourierAdapter, type NormalizedDeliveryStatus, type ShipmentRequest } from '../couriers/types.js';
-import type { Seller, SellerPatch, Store, StoredOrder } from '../db/store.js';
+import type { OrderListOptions, Seller, SellerPatch, Store, StoredOrder } from '../db/store.js';
 import { assertTransition } from '../domain/order-state.js';
-import { normalizeBdPhone } from '../domain/phone.js';
+import { maskPhone, normalizeBdPhone } from '../domain/phone.js';
 import type { CourierId, DeliveryOutcome, OrderInput, OrderStatus, RiskAssessment } from '../domain/types.js';
 import { hashPhone, newId, randomCode, sha256Hex, type SecretBox } from '../lib/crypto.js';
 import { AppError, notFound } from '../lib/errors.js';
@@ -219,8 +219,16 @@ export class ShipnodService {
     return { order, events: this.store.listOrderEvents(order.id) };
   }
 
-  listOrders(seller: Seller, opts: { status?: OrderStatus; limit?: number; offset?: number }) {
-    return this.store.listOrders(seller.id, opts);
+  listOrders(seller: Seller, opts: OrderListOptions) {
+    const search = opts.search?.trim();
+    // A phone typed in any format (+880…, Bangla digits) should still find the stored "01…" number.
+    const normalized = search ? normalizeBdPhone(search) : null;
+    return this.store.listOrders(seller.id, { ...opts, search: normalized ?? (search || undefined) });
+  }
+
+  /** All-time order counts per status, for dashboard tabs and to-do counters. */
+  orderCounts(seller: Seller): Partial<Record<OrderStatus, number>> {
+    return this.store.countOrdersByStatus(seller.id) as Partial<Record<OrderStatus, number>>;
   }
 
   private transition(order: StoredOrder, to: OrderStatus, actor: string, detail?: string): StoredOrder {
@@ -470,7 +478,16 @@ export class ShipnodService {
   blockPhone(seller: Seller, phone: string, reason: string | null): void {
     const normalized = normalizeBdPhone(phone);
     if (!normalized) throw new AppError(400, 'invalid_phone', 'Not a valid Bangladeshi mobile number');
-    this.store.block(seller.id, hashPhone(this.deps.networkHashSecret, normalized), reason);
+    this.store.block(seller.id, hashPhone(this.deps.networkHashSecret, normalized), reason, maskPhone(normalized));
+  }
+
+  listBlocklist(seller: Seller) {
+    return this.store.listBlocklist(seller.id);
+  }
+
+  /** Dashboard unblock: entries are identified by hash because the raw number is never stored. */
+  unblockHash(seller: Seller, phoneHash: string): boolean {
+    return this.store.unblock(seller.id, phoneHash);
   }
 
   unblockPhone(seller: Seller, phone: string): boolean {

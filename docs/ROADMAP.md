@@ -20,9 +20,11 @@ Each release ships only after the previous one is used by paying sellers. Dates 
 
 ## v0.2 — Sellable product
 
-- [ ] Seller dashboard UI (Next.js or server-rendered), Bangla-first, mobile-friendly
-- [ ] Order inbox with filters by risk level and status; one-click courier booking
-- [ ] Savings dashboard UI on top of `GET /v1/stats` (add confirmation rate, per-courier and per-district RTO)
+- [x] Seller dashboard (server-rendered, Bangla-first, mobile-friendly) with phone + SMS-code login
+- [x] Order inbox with tabs by stage, risk-level filter and search; one-click courier booking; manual order entry
+- [x] Savings overview: estimated taka saved, RTO rate, to-do counts, plan usage
+- [x] Demo-shop seed script for sales demos (`npm run seed:demo`)
+- [ ] Analytics: confirmation rate, RTO by courier and by district
 - [ ] Billing: bKash / Nagad / SSLCommerz payment links, invoices, plan upgrades
 - [ ] Courier webhooks where available (polling sync already exists)
 - [ ] CSV import of orders and historical outcomes

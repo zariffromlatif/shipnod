@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seller:create": "tsx --disable-warning=ExperimentalWarning scripts/create-seller.ts"
+    "seller:create": "tsx --disable-warning=ExperimentalWarning scripts/create-seller.ts",
+    "seed:demo": "tsx --disable-warning=ExperimentalWarning scripts/seed-demo.ts"
   },
   "license": "UNLICENSED",
   "dependencies": {

@@ -2,6 +2,7 @@ import type { AppConfig } from './config.js';
 import { ConsoleSmsProvider, HttpTemplateSmsProvider, type SmsProvider } from './confirmation/sms.js';
 import { Store } from './db/store.js';
 import { SecretBox } from './lib/crypto.js';
+import { AuthService } from './services/auth.js';
 import { ShipnodService } from './services/shipnod.js';
 
 /** Wires the object graph from config. Shared by the server and CLI scripts. */
@@ -27,5 +28,6 @@ export function buildService(config: AppConfig, overrides: { sms?: SmsProvider; 
     courierSandbox: config.courierSandbox,
     fetch: overrides.fetch,
   });
-  return { store, sms, service };
+  const auth = new AuthService({ store, sms, service });
+  return { store, sms, service, auth };
 }

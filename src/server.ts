@@ -4,8 +4,11 @@ import { createApp } from './http/app.js';
 import { buildService } from './main.js';
 
 const config = loadConfig();
-const { store, service } = buildService(config);
-const app = createApp(service);
+const { store, service, auth } = buildService(config);
+const app = createApp(service, auth, {
+  publicBaseUrl: config.publicBaseUrl,
+  secureCookies: config.nodeEnv === 'production',
+});
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Shipnod listening on http://localhost:${info.port} (${config.nodeEnv}, sms=${config.sms.provider})`);

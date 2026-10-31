@@ -20,10 +20,23 @@ src/
   db/             node:sqlite Store + migrations
   services/       ShipnodService: the order pipeline (the only place business rules live)
   http/           Hono app: seller API, webhooks, customer confirmation pages
+  http/dashboard/ server-rendered seller dashboard (/app): views, routes, UI kit
   server.ts       process entry: HTTP server + courier status-sync timer
 ```
 
-The HTTP layer validates input (zod) and maps errors. All rules (plan limits, transitions, when to send SMS, when to record network outcomes) live in `ShipnodService`, so a future dashboard, CSV importer or Chrome extension reuses the same pipeline.
+The HTTP layer validates input (zod) and maps errors. All rules (plan limits, transitions, when to send SMS, when to record network outcomes) live in `ShipnodService`, so the API, the dashboard and a future CSV importer or Chrome extension all run the same pipeline.
+
+## Seller dashboard
+
+The dashboard is server-rendered by the same process, with no client-side framework and no build step. Pages are plain HTML forms, so they work on cheap Android phones and slow connections.
+
+- **Rendering:** templates use `hono/html`, which escapes every interpolated value. Customer-supplied text (names, addresses, notes) cannot inject markup, and a test checks this. `raw()` is used only for constant strings.
+- **Login:** phone number plus a 6-digit SMS code, the same flow sellers know from bKash and bank apps. Codes are stored hashed, expire after 10 minutes, and can be used once. Each code allows 5 wrong guesses. A seller can request at most one code per 60 seconds and 5 per hour. An unregistered number gets the same screen as a registered one, so the login page can't be used to find out which numbers are sellers. Logging in with an API key is the fallback.
+- **Sessions:** a random 32-byte token in an `HttpOnly`, `SameSite=Lax` cookie (also `Secure` in production), scoped to `/app` and kept for 30 days. Only its SHA-256 hash is stored.
+- **CSRF:** every form carries a token derived from the session token, checked in constant time on every POST, on top of `SameSite=Lax`.
+- **Isolation:** every order lookup is scoped to the logged-in seller. Another seller's order id returns 404.
+- **Blocklist display:** blocked numbers are stored as an HMAC plus a masked form (`013****8888`), so sellers can recognise them without the raw number being kept.
+- **Visual rules:** the status colours (green, amber, orange, red) are reserved for risk levels, and each level also has its own glyph and text label, so colour never carries meaning alone. There is one large headline figure per page. Light and dark mode follow the device setting.
 
 ## Order pipeline
 
@@ -85,6 +98,8 @@ Default thresholds: medium 30, high 60, critical 80. Growth+ sellers can overrid
 | `usage` | Per seller per month: orders, risk checks, SMS, SMS segments |
 | `courier_accounts` | Courier credentials, AES-256-GCM sealed with `APP_ENCRYPTION_KEY` |
 | `sms_log` | Every SMS attempt with provider response |
+| `sessions` | Dashboard sessions: token **hash**, seller, expiry |
+| `login_codes` | SMS login codes: code **hash**, attempts, expiry, used-at |
 
 Migrations are append-only SQL in `db/migrations.ts`, tracked with `PRAGMA user_version`.
 
@@ -119,9 +134,14 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
 
 ## Testing
 
-`npm test` runs 69 tests:
+`npm test` runs 85 tests:
 
 - Unit tests: phone formats, the state machine, SMS segmenting, crypto, plans and config guards.
 - Risk scenarios, including that reason points sum to the score.
 - Courier adapters and store-payload mapping against fake `fetch`.
 - An end-to-end API test of the full loop: order → SMS → customer confirms → Steadfast booking → status sync → delivered → the same customer auto-ships next time → a second seller is protected by the first seller's returns.
+- Dashboard tests through a cookie-keeping test client:
+  - login: SMS code, replay, wrong-guess and resend limits, expiry, not revealing which numbers are registered, API-key login, logout;
+  - security: CSRF rejection, XSS escaping, seller isolation;
+  - workflow: the full order flow through forms, tab, risk and Bangla-digit search filters;
+  - settings: validation and plan gates.
