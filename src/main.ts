@@ -2,7 +2,10 @@ import type { AppConfig } from './config.js';
 import { ConsoleSmsProvider, HttpTemplateSmsProvider, type SmsProvider } from './confirmation/sms.js';
 import { Store } from './db/store.js';
 import { SecretBox } from './lib/crypto.js';
+import { SslCommerzClient } from './billing/sslcommerz.js';
+import { BillingRepo } from './db/billing-repo.js';
 import { AuthService } from './services/auth.js';
+import { BillingService } from './services/billing.js';
 import { ShipnodService } from './services/shipnod.js';
 
 /** Wires the object graph from config. Shared by the server and CLI scripts. */
@@ -29,5 +32,14 @@ export function buildService(config: AppConfig, overrides: { sms?: SmsProvider; 
     fetch: overrides.fetch,
   });
   const auth = new AuthService({ store, sms, service });
-  return { store, sms, service, auth };
+  const billingRepo = new BillingRepo(store.db);
+  const billing = new BillingService({
+    store,
+    repo: billingRepo,
+    sms,
+    publicBaseUrl: config.publicBaseUrl,
+    sslcommerz: config.billing.sslcommerz ? new SslCommerzClient({ ...config.billing.sslcommerz, fetch: overrides.fetch }) : null,
+    manual: { bkash: config.billing.bkashNumber, nagad: config.billing.nagadNumber },
+  });
+  return { store, sms, service, auth, billing, billingRepo };
 }

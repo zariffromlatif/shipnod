@@ -1,4 +1,6 @@
 import { html, raw } from 'hono/html';
+import { planOf } from '../../billing/plans.js';
+import { subscriptionState, type SubscriptionState } from '../../billing/subscription.js';
 import type { Seller } from '../../db/store.js';
 import type { OrderStatus, RiskAssessment, RiskLevel } from '../../domain/types.js';
 
@@ -193,7 +195,7 @@ h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.05rem;margin:0 0 10px}
 .meter span{display:block;height:100%;border-radius:999px;background:var(--fill)}
 .meter.tone-warning{--fill:var(--warning)}.meter.tone-critical{--fill:var(--critical)}
 .flash{border-radius:10px;padding:10px 12px;margin-top:14px;border:1px solid var(--line);background:var(--surface)}
-.flash-ok{border-left:4px solid var(--good)}.flash-error{border-left:4px solid var(--critical);color:var(--critical-text)}
+.flash-ok{border-left:4px solid var(--good)}.flash-warn{border-left:4px solid var(--warning)}.flash-error{border-left:4px solid var(--critical);color:var(--critical-text)}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 0}
 .tabs a{padding:6px 12px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--ink-2);background:var(--surface);font-size:.9rem}
 .tabs a[aria-current=page]{border-color:var(--ink);color:var(--ink);font-weight:600}
@@ -220,7 +222,10 @@ dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}d
 code{font-size:.85rem;background:var(--bg);border:1px solid var(--line);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
 table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:6px 4px;border-top:1px solid var(--line);font-size:.9rem;vertical-align:top}
 .empty{color:var(--muted);text-align:center;padding:28px 8px}
+.scroll-x{overflow-x:auto}
 .auth{max-width:400px;margin:8vh auto 0}
+.status{font-weight:600}
+thead th{color:var(--muted);font-weight:500;border-top:0}
 `);
 
 const NAV: Array<{ href: string; label: string; key: string }> = [
@@ -228,10 +233,28 @@ const NAV: Array<{ href: string; label: string; key: string }> = [
   { href: '/app/orders', label: 'অর্ডার', key: 'orders' },
   { href: '/app/orders/new', label: '+ নতুন অর্ডার', key: 'new' },
   { href: '/app/check', label: 'কাস্টমার চেক', key: 'check' },
+  { href: '/app/billing', label: 'বিলিং', key: 'billing' },
   { href: '/app/settings', label: 'সেটিংস', key: 'settings' },
 ];
 
-function document(title: string, body: Html): Html {
+const LONG_DATE = new Intl.DateTimeFormat('bn-BD', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'long', year: 'numeric' });
+
+/** Shown above every dashboard page when the plan needs attention. */
+export function subscriptionBanner(state: SubscriptionState): Html | string {
+  const renew = html`<a href="/app/billing">রিনিউ করুন</a>`;
+  if (state.status === 'grace' && state.graceEndsAt) {
+    return html`<div class="flash flash-error" role="alert"><span aria-hidden="true">! </span>আপনার ${planOf(state.purchasedPlan).name} প্ল্যানের মেয়াদ শেষ। ${LONG_DATE.format(state.graceEndsAt)} এর মধ্যে রিনিউ না করলে অর্ডার অটোমেশন বন্ধ হয়ে যাবে। ${renew}</div>`;
+  }
+  if (state.status === 'expired') {
+    return html`<div class="flash flash-error" role="alert"><span aria-hidden="true">! </span>আপনার প্ল্যানের মেয়াদ শেষ — এখন Free প্ল্যান চলছে, নতুন অর্ডার অটোমেট হচ্ছে না। ${renew}</div>`;
+  }
+  if (state.status === 'active' && state.daysLeft !== null && state.daysLeft <= 5) {
+    return html`<div class="flash flash-warn" role="status"><span aria-hidden="true">⏰ </span>${num(Math.max(state.daysLeft, 0))} দিনের মধ্যে আপনার প্ল্যানের মেয়াদ শেষ হবে। ${renew}</div>`;
+  }
+  return '';
+}
+
+export function shell(title: string, body: Html): Html {
   return html`<!doctype html>
 <html lang="bn">
 <head>
@@ -245,9 +268,9 @@ function document(title: string, body: Html): Html {
 </html>`;
 }
 
-export function page(args: { title: string; active: string; seller: Seller; csrf: string; body: Html }): Html {
+export function page(args: { title: string; active: string; seller: Seller; csrf: string; body: Html; now?: Date }): Html {
   const { title, active, seller, csrf, body } = args;
-  return document(
+  return shell(
     title,
     html`<header class="top"><div class="top-in">
       <a class="brand" href="/app">Shipnod<small>${seller.shopName}</small></a>
@@ -256,10 +279,10 @@ export function page(args: { title: string; active: string; seller: Seller; csrf
       </nav>
       <form class="inline" method="post" action="/app/logout">${csrfField(csrf)}<button type="submit">লগআউট</button></form>
     </div></header>
-    <main>${body}</main>`,
+    <main>${active === 'billing' ? '' : subscriptionBanner(subscriptionState(seller, args.now ?? new Date()))}${body}</main>`,
   );
 }
 
 export function authPage(title: string, body: Html): Html {
-  return document(title, html`<main class="auth"><p class="brand" style="font-size:1.3rem">Shipnod</p>${body}</main>`);
+  return shell(title, html`<main class="auth"><p class="brand" style="font-size:1.3rem">Shipnod</p>${body}</main>`);
 }

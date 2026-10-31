@@ -25,7 +25,9 @@ Each release ships only after the previous one is used by paying sellers. Dates 
 - [x] Savings overview: estimated taka saved, RTO rate, to-do counts, plan usage
 - [x] Demo-shop seed script for sales demos (`npm run seed:demo`)
 - [ ] Analytics: confirmation rate, RTO by courier and by district
-- [ ] Billing: bKash / Nagad / SSLCommerz payment links, invoices, plan upgrades
+- [x] Billing: prepaid plans, invoices, SSLCommerz checkout (bKash/Nagad/cards), manual bKash/Nagad with admin approval, upgrade credit, overage billing, renewal reminders, grace → Free
+- [x] Admin console: MRR, payment review, comp/pilot plans
+- [ ] bKash tokenized checkout API directly (lower fees than via a gateway) once volume justifies the merchant onboarding
 - [ ] Courier webhooks where available (polling sync already exists)
 - [ ] CSV import of orders and historical outcomes
 - [ ] Production SMS provider integration with registered sender ID

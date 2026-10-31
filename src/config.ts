@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeBdPhone } from './domain/phone.js';
 
 const DEV_NETWORK_SECRET = 'dev-only-network-secret-do-not-use-in-production';
 const DEV_ENCRYPTION_KEY = '0'.repeat(64);
@@ -23,6 +24,12 @@ const envSchema = z.object({
   COURIER_SANDBOX: bool,
   STATUS_SYNC_INTERVAL_MINUTES: z.coerce.number().min(0).default(30),
   CONFIRM_TTL_HOURS: z.coerce.number().positive().default(48),
+  SSLCOMMERZ_STORE_ID: z.string().optional(),
+  SSLCOMMERZ_STORE_PASSWORD: z.string().optional(),
+  SSLCOMMERZ_SANDBOX: bool,
+  BILLING_BKASH_NUMBER: z.string().optional(),
+  BILLING_NAGAD_NUMBER: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 });
 
 export interface AppConfig {
@@ -38,6 +45,13 @@ export interface AppConfig {
   courierSandbox: boolean;
   statusSyncIntervalMinutes: number;
   confirmTtlHours: number;
+  billing: {
+    sslcommerz: { storeId: string; storePassword: string; sandbox: boolean } | null;
+    bkashNumber: string | null;
+    nagadNumber: string | null;
+  };
+  /** Enables /admin when set (>= 12 characters). */
+  adminPassword: string | null;
 }
 
 const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
@@ -74,6 +88,19 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error('SMS_PROVIDER=console is not allowed in production');
   }
 
+  if ((e.SSLCOMMERZ_STORE_ID === undefined) !== (e.SSLCOMMERZ_STORE_PASSWORD === undefined)) {
+    throw new Error('Set both SSLCOMMERZ_STORE_ID and SSLCOMMERZ_STORE_PASSWORD, or neither');
+  }
+  const manualNumber = (name: string, value: string | undefined) => {
+    if (!value) return null;
+    const normalized = normalizeBdPhone(value);
+    if (!normalized) throw new Error(`${name} must be a Bangladeshi mobile number`);
+    return normalized;
+  };
+  if (e.ADMIN_PASSWORD !== undefined && e.ADMIN_PASSWORD.length < 12) {
+    throw new Error('ADMIN_PASSWORD must be at least 12 characters');
+  }
+
   return {
     nodeEnv: e.NODE_ENV,
     port: e.PORT,
@@ -85,5 +112,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     courierSandbox: e.COURIER_SANDBOX,
     statusSyncIntervalMinutes: e.STATUS_SYNC_INTERVAL_MINUTES,
     confirmTtlHours: e.CONFIRM_TTL_HOURS,
+    billing: {
+      sslcommerz:
+        e.SSLCOMMERZ_STORE_ID && e.SSLCOMMERZ_STORE_PASSWORD
+          ? { storeId: e.SSLCOMMERZ_STORE_ID, storePassword: e.SSLCOMMERZ_STORE_PASSWORD, sandbox: e.SSLCOMMERZ_SANDBOX }
+          : null,
+      bkashNumber: manualNumber('BILLING_BKASH_NUMBER', e.BILLING_BKASH_NUMBER),
+      nagadNumber: manualNumber('BILLING_NAGAD_NUMBER', e.BILLING_NAGAD_NUMBER),
+    },
+    adminPassword: e.ADMIN_PASSWORD ?? null,
   };
 }

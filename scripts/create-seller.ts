@@ -15,11 +15,12 @@ const { values } = parseArgs({
     plan: { type: 'string', default: 'free' },
     phone: { type: 'string' },
     lang: { type: 'string', default: 'bn' },
+    'trial-days': { type: 'string' },
   },
 });
 
 if (!values.name || !values.shop) {
-  console.error('Usage: npm run seller:create -- --name "Owner name" --shop "Shop name" [--plan free|starter|growth|scale] [--phone 01...] [--lang bn|banglish|en]');
+  console.error('Usage: npm run seller:create -- --name "Owner name" --shop "Shop name" [--plan free|starter|growth|scale] [--trial-days 14] [--phone 01...] [--lang bn|banglish|en]');
   process.exit(1);
 }
 if (!isPlanId(values.plan!)) {
@@ -33,7 +34,7 @@ if (!['bn', 'banglish', 'en'].includes(lang)) {
 }
 
 const config = loadConfig();
-const { service, store } = buildService(config);
+const { service, store, billing } = buildService(config);
 const { seller, apiKey } = service.createSeller({
   name: values.name,
   shopName: values.shop,
@@ -41,10 +42,18 @@ const { seller, apiKey } = service.createSeller({
   phone: values.phone,
   smsLang: lang,
 });
+const trialDays = values['trial-days'] ? Number(values['trial-days']) : null;
+if (trialDays !== null) {
+  if (!Number.isInteger(trialDays) || trialDays < 1 || values.plan === 'free') {
+    console.error('--trial-days needs a positive whole number and a paid --plan');
+    process.exit(1);
+  }
+  billing.grantPlan(seller.id, values.plan as 'starter' | 'growth' | 'scale', trialDays);
+}
 store.close();
 
 console.log(`
-Seller created: ${seller.id} (${seller.shopName}, plan: ${seller.plan})
+Seller created: ${seller.id} (${seller.shopName}, plan: ${seller.plan}${trialDays ? `, ${trialDays}-day pilot — then they pay at /app/billing` : seller.plan === 'free' ? '' : ', no expiry'})
 
 API key (store it now — it is not shown again):
   ${apiKey}

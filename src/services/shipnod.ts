@@ -1,4 +1,5 @@
-import { billingPeriod, overageBdt, planOf, type Plan, type PlanId } from '../billing/plans.js';
+import { billingPeriod, OVERAGE_BDT_PER_ORDER, planOf, type Plan, type PlanId } from '../billing/plans.js';
+import { subscriptionState } from '../billing/subscription.js';
 import { advancePaymentSms, confirmationSms, type SmsLanguage } from '../confirmation/messages.js';
 import type { SmsProvider } from '../confirmation/sms.js';
 import { courierCredentialSchemas, createCourierAdapter } from '../couriers/registry.js';
@@ -88,7 +89,7 @@ export class ShipnodService {
   }
 
   updateSettings(seller: Seller, patch: SellerPatch): Seller {
-    if (patch.riskPolicy && !planOf(seller.plan).customRiskRules) {
+    if (patch.riskPolicy && !this.planFor(seller).customRiskRules) {
       throw new AppError(402, 'plan_required', 'Custom risk rules need the Growth plan or above');
     }
     if (patch.bkashNumber) {
@@ -99,8 +100,18 @@ export class ShipnodService {
     return this.store.updateSeller(seller.id, patch);
   }
 
+  /** Subscription status (active, grace, expired…) of a seller right now. */
+  subscription(seller: Seller) {
+    return subscriptionState(seller, this.now());
+  }
+
+  /** The plan whose limits apply right now: an expired paid plan behaves like Free. */
+  planFor(seller: Seller): Plan {
+    return planOf(this.subscription(seller).effectivePlan);
+  }
+
   policyFor(seller: Seller): RiskPolicy {
-    return planOf(seller.plan).customRiskRules && seller.riskPolicy ? seller.riskPolicy : DEFAULT_RISK_POLICY;
+    return this.planFor(seller).customRiskRules && seller.riskPolicy ? seller.riskPolicy : DEFAULT_RISK_POLICY;
   }
 
   // ------------------------------------------------------------------- risk
@@ -133,7 +144,7 @@ export class ShipnodService {
 
   /** Manual "is this customer safe?" lookup. Metered against the plan's monthly risk checks. */
   checkCustomer(seller: Seller, args: { phone: string; codAmount?: number; address?: string }) {
-    const plan = planOf(seller.plan);
+    const plan = this.planFor(seller);
     const period = billingPeriod(this.now());
     if (this.store.getUsage(seller.id, period).riskChecks >= plan.monthlyRiskChecks) {
       throw new AppError(402, 'quota_exceeded', `Monthly risk-check limit (${plan.monthlyRiskChecks}) reached on the ${plan.name} plan`);
@@ -147,7 +158,7 @@ export class ShipnodService {
 
   /** Idempotent on (source, externalId), so webhook retries never create duplicates. */
   async createOrder(seller: Seller, input: OrderInput): Promise<{ order: StoredOrder; created: boolean }> {
-    const plan = planOf(seller.plan);
+    const plan = this.planFor(seller);
     if (plan.monthlyOrders === 0) {
       throw new AppError(402, 'plan_required', 'Order automation needs a paid plan (Starter or above)');
     }
@@ -191,7 +202,10 @@ export class ShipnodService {
       updatedAt: ts,
     });
     this.store.addOrderEvent({ orderId: id, from: null, to: 'new', actor: `import:${input.source}`, detail: `risk ${risk.score} (${risk.level})` });
-    this.store.incrementUsage(seller.id, billingPeriod(this.now()), { orders: 1 });
+    // Orders beyond the quota are recorded now, against the plan active now, and billed on the next invoice.
+    const period = billingPeriod(this.now());
+    const overage = this.store.getUsage(seller.id, period).orders >= plan.monthlyOrders ? 1 : 0;
+    this.store.incrementUsage(seller.id, period, { orders: 1, overageOrders: overage });
 
     // An unreachable number can't confirm anything — always hold regardless of custom thresholds.
     const action = order.phoneValid ? risk.action : 'hold';
@@ -343,7 +357,7 @@ export class ShipnodService {
   // --------------------------------------------------------------- couriers
 
   connectCourier(seller: Seller, courier: CourierId, credentials: unknown): CourierId[] {
-    const plan = planOf(seller.plan);
+    const plan = this.planFor(seller);
     const connected = this.store.listCourierAccounts(seller.id);
     if (!connected.includes(courier) && connected.length >= plan.maxCouriers) {
       throw new AppError(402, 'plan_limit', `The ${plan.name} plan allows ${plan.maxCouriers} courier account(s)`);
@@ -520,9 +534,9 @@ export class ShipnodService {
   }
 
   usage(seller: Seller) {
-    const plan: Plan = planOf(seller.plan);
+    const plan: Plan = this.planFor(seller);
     const period = billingPeriod(this.now());
     const usage = this.store.getUsage(seller.id, period);
-    return { period, plan, usage, overageBdt: overageBdt(plan, usage.orders) };
+    return { period, plan, usage, overageBdt: usage.overageOrders * OVERAGE_BDT_PER_ORDER, subscription: this.subscription(seller) };
   }
 }

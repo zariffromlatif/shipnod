@@ -245,8 +245,12 @@ describe('store webhooks', () => {
     expect((await post('sel_unknown', 'x', '{}')).status).toBe(404);
     expect((await post(growth.id, growth.webhookSecret, '{"nope":true}')).status).toBe(422);
 
+    // Not on the plan: acknowledged (so WooCommerce keeps the webhook enabled) but not imported.
     const starter = t.sellerClient('starter').seller;
-    expect((await post(starter.id, starter.webhookSecret, JSON.stringify(wooOrder))).status).toBe(402);
+    const gated = await post(starter.id, starter.webhookSecret, JSON.stringify(wooOrder));
+    expect(gated.status).toBe(200);
+    expect(await gated.json()).toMatchObject({ ok: false, ignored: 'plan_required' });
+    expect(t.store.listOrders(starter.id)).toHaveLength(0);
   });
 
   it('imports signed Shopify orders', async () => {

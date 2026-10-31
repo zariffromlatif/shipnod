@@ -4,11 +4,16 @@ import { createApp } from './http/app.js';
 import { buildService } from './main.js';
 
 const config = loadConfig();
-const { store, service, auth } = buildService(config);
-const app = createApp(service, auth, {
-  publicBaseUrl: config.publicBaseUrl,
-  secureCookies: config.nodeEnv === 'production',
-});
+const { store, service, auth, billing, billingRepo } = buildService(config);
+const app = createApp(
+  { service, auth, billing, billingRepo },
+  {
+    publicBaseUrl: config.publicBaseUrl,
+    secureCookies: config.nodeEnv === 'production',
+    adminPassword: config.adminPassword,
+  },
+);
+if (!config.adminPassword) console.log('Admin console disabled (set ADMIN_PASSWORD to enable /admin)');
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Shipnod listening on http://localhost:${info.port} (${config.nodeEnv}, sms=${config.sms.provider})`);
@@ -29,9 +34,18 @@ if (config.statusSyncIntervalMinutes > 0) {
   }, config.statusSyncIntervalMinutes * 60_000);
 }
 
+// Renewal reminders: hourly is plenty; each reminder stage is sent at most once per paid period.
+const reminderTimer = setInterval(() => {
+  billing.runReminders().then(
+    (n) => n > 0 && console.log(`[billing] sent ${n} renewal reminder(s)`),
+    (err) => console.error('[billing] reminders failed:', err),
+  );
+}, 3600_000);
+
 function shutdown(signal: string) {
   console.log(`${signal} received, shutting down`);
   if (syncTimer) clearInterval(syncTimer);
+  clearInterval(reminderTimer);
   server.close(() => {
     store.close();
     process.exit(0);

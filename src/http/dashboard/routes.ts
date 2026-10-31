@@ -6,7 +6,10 @@ import type { Seller } from '../../db/store.js';
 import { InvalidTransitionError } from '../../domain/order-state.js';
 import { COURIER_IDS, type OrderItem, type RiskLevel } from '../../domain/types.js';
 import { AppError } from '../../lib/errors.js';
+import { CYCLES, nextPaidUntil, type Cycle } from '../../billing/subscription.js';
 import { SESSION_TTL_DAYS, type AuthService } from '../../services/auth.js';
+import type { BillingService } from '../../services/billing.js';
+import { BILLING_MESSAGES, billingPage, invoicePage } from './billing-views.js';
 import type { SellerAction, ShipnodService } from '../../services/shipnod.js';
 import {
   checkPage,
@@ -69,12 +72,26 @@ function errorMessage(err: unknown): string | null {
     case 'plan_required':
     case 'plan_limit':
       return `আপনার প্ল্যানে এটি নেই — ${err.message}`;
+    case 'already_paid':
+      return 'এই ইনভয়েস আগেই পরিশোধ করা হয়েছে।';
+    case 'invoice_expired':
+      return 'এই ইনভয়েসের মেয়াদ শেষ। বিলিং পাতা থেকে নতুন করে নিন।';
+    case 'online_unavailable':
+      return 'অনলাইন পেমেন্ট এখনো চালু হয়নি। Send Money করে পেমেন্ট করুন।';
+    case 'invalid_reference':
+      return 'bKash/Nagad মেসেজে আসা Transaction ID (TrxID) ঠিকভাবে লিখুন।';
+    case 'duplicate_reference':
+      return 'এই Transaction ID আগেই জমা দেওয়া হয়েছে।';
+    case 'already_submitted':
+      return 'এই ইনভয়েসের একটি পেমেন্ট আগেই যাচাইয়ের অপেক্ষায় আছে।';
+    case 'payment_provider_error':
+      return 'পেমেন্ট গেটওয়েতে সমস্যা হয়েছে। একটু পর আবার চেষ্টা করুন অথবা Send Money করুন।';
     default:
       return err.message;
   }
 }
 
-export function createDashboard(service: ShipnodService, auth: AuthService, opts: DashboardOptions): Hono<DashEnv> {
+export function createDashboard(service: ShipnodService, auth: AuthService, billing: BillingService, opts: DashboardOptions): Hono<DashEnv> {
   const app = new Hono<DashEnv>();
   const now = opts.now ?? (() => new Date());
 
@@ -159,12 +176,11 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     return c.html(
       overviewPage({
         seller,
-        csrf: c.get('csrf'),
+        csrf: c.get('csrf'), now: now(),
         stats: service.stats(seller, 30),
         counts: service.orderCounts(seller),
         usage: service.usage(seller),
         recent: service.listOrders(seller, { limit: 8 }),
-        now: now(),
       }),
     );
   });
@@ -189,7 +205,7 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     return c.html(
       ordersPage({
         seller,
-        csrf: c.get('csrf'),
+        csrf: c.get('csrf'), now: now(),
         orders: rows.slice(0, PAGE_SIZE),
         tab,
         level,
@@ -197,12 +213,11 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
         counts: service.orderCounts(seller),
         page: pageNo,
         hasNext: rows.length > PAGE_SIZE,
-        now: now(),
       }),
     );
   });
 
-  app.get('/orders/new', (c) => c.html(newOrderPage({ seller: c.get('seller'), csrf: c.get('csrf') })));
+  app.get('/orders/new', (c) => c.html(newOrderPage({ seller: c.get('seller'), csrf: c.get('csrf'), now: now() })));
 
   app.post('/orders/new', async (c) => {
     const seller = c.get('seller');
@@ -220,7 +235,7 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
         unitPrice: field(form, `item${i}price`),
       })),
     };
-    const fail = (error: string) => c.html(newOrderPage({ seller, csrf: c.get('csrf'), values, error }), 422);
+    const fail = (error: string) => c.html(newOrderPage({ seller, csrf: c.get('csrf'), now: now(), values, error }), 422);
 
     const amount = Number(values.codAmount);
     if (!values.customerName || !values.phone || !values.address) return fail('নাম, মোবাইল নম্বর আর ঠিকানা দিন।');
@@ -259,7 +274,7 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     const seller = c.get('seller');
     const { order, events } = service.getOrder(seller, orderId);
     return c.html(
-      orderDetailPage({ seller, csrf: c.get('csrf'), order, events, couriers: service.listCouriers(seller), ...extra }),
+      orderDetailPage({ seller, csrf: c.get('csrf'), now: now(), order, events, couriers: service.listCouriers(seller), ...extra }),
       extra.status ?? 200,
     );
   };
@@ -325,7 +340,7 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
 
   // ------------------------------------------------------------ customer check
 
-  app.get('/check', (c) => c.html(checkPage({ seller: c.get('seller'), csrf: c.get('csrf') })));
+  app.get('/check', (c) => c.html(checkPage({ seller: c.get('seller'), csrf: c.get('csrf'), now: now() })));
 
   app.post('/check', async (c) => {
     const seller = c.get('seller');
@@ -334,10 +349,10 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     const amount = Number(field(form, 'codAmount'));
     try {
       const result = service.checkCustomer(seller, { phone, codAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined });
-      return c.html(checkPage({ seller, csrf: c.get('csrf'), phone, result }));
+      return c.html(checkPage({ seller, csrf: c.get('csrf'), now: now(), phone, result }));
     } catch (err) {
       const message = errorMessage(err);
-      if (message) return c.html(checkPage({ seller, csrf: c.get('csrf'), phone, error: message }), 422);
+      if (message) return c.html(checkPage({ seller, csrf: c.get('csrf'), now: now(), phone, error: message }), 422);
       throw err;
     }
   });
@@ -350,7 +365,7 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     return c.html(
       settingsPage({
         seller,
-        csrf: c.get('csrf'),
+        csrf: c.get('csrf'), now: now(),
         plan,
         usage,
         couriers: service.listCouriers(seller),
@@ -430,6 +445,102 @@ export function createDashboard(service: ShipnodService, auth: AuthService, opts
     } catch (err) {
       const message = errorMessage(err);
       if (message) return renderSettings(c, { error: message, status: 422 });
+      throw err;
+    }
+  });
+
+  // ------------------------------------------------------------------- billing
+
+  const PAID_PLANS = ['starter', 'growth', 'scale'] as const;
+
+  const renderBilling = (c: Context<DashEnv>, cycle: Cycle, extra: { message?: string; error?: string; status?: 200 | 422 } = {}) => {
+    const seller = c.get('seller');
+    return c.html(
+      billingPage({
+        seller,
+        csrf: c.get('csrf'), now: now(),
+        state: billing.state(seller),
+        effectivePlan: service.planFor(seller),
+        cycle,
+        quotes: PAID_PLANS.map((p) => billing.quote(seller, p, cycle)),
+        invoices: billing.listInvoices(seller),
+        ...extra,
+      }),
+      extra.status ?? 200,
+    );
+  };
+
+  app.get('/billing', (c) => {
+    const cycle = c.req.query('cycle') === 'annual' ? 'annual' : 'monthly';
+    return renderBilling(c, cycle);
+  });
+
+  app.post('/billing', async (c) => {
+    const seller = c.get('seller');
+    const form = await c.req.parseBody();
+    const parsed = z
+      .object({ plan: z.enum(PAID_PLANS), cycle: z.enum(CYCLES) })
+      .safeParse({ plan: field(form, 'plan'), cycle: field(form, 'cycle') });
+    if (!parsed.success) return renderBilling(c, 'monthly', { error: 'প্ল্যান বেছে নিন।', status: 422 });
+    const invoice = billing.createInvoice(seller, parsed.data.plan, parsed.data.cycle);
+    return c.redirect(`/app/billing/invoices/${invoice.id}?msg=created`, 303);
+  });
+
+  const renderInvoice = (
+    c: Context<DashEnv>,
+    invoiceId: string,
+    extra: { message?: string; error?: string; form?: Record<string, string>; status?: 200 | 422 } = {},
+  ) => {
+    const seller = c.get('seller');
+    const invoice = billing.getInvoice(seller, invoiceId);
+    return c.html(
+      invoicePage({
+        seller,
+        csrf: c.get('csrf'), now: now(),
+        invoice,
+        payments: billing.invoicePayments(invoice),
+        payable: billing.isPayable(invoice),
+        paidUntilIfPaidNow: nextPaidUntil(seller, invoice.plan, invoice.cycle, now()),
+        options: billing.paymentOptions(),
+        ...extra,
+      }),
+      extra.status ?? 200,
+    );
+  };
+
+  app.get('/billing/invoices/:id', (c) => {
+    const msg = c.req.query('msg');
+    try {
+      return renderInvoice(c, c.req.param('id'), { message: msg ? BILLING_MESSAGES[msg] : undefined });
+    } catch (err) {
+      if (err instanceof AppError && err.status === 404) return c.text('Invoice not found', 404);
+      throw err;
+    }
+  });
+
+  app.post('/billing/invoices/:id', async (c) => {
+    const seller = c.get('seller');
+    const id = c.req.param('id');
+    const form = await c.req.parseBody();
+    const op = field(form, 'op');
+    const manual = { method: field(form, 'method'), payerPhone: field(form, 'payerPhone'), reference: field(form, 'reference') };
+    try {
+      switch (op) {
+        case 'online':
+          return c.redirect(await billing.startOnlinePayment(seller, id), 303);
+        case 'manual':
+          billing.submitManualPayment(seller, id, manual);
+          return c.redirect(`/app/billing/invoices/${id}?msg=submitted`, 303);
+        case 'credit':
+          await billing.payWithCredit(seller, id);
+          return c.redirect(`/app/billing/invoices/${id}?msg=paid`, 303);
+        default:
+          return renderInvoice(c, id, { error: 'অজানা অ্যাকশন।', status: 422 });
+      }
+    } catch (err) {
+      if (err instanceof AppError && err.status === 404) return c.text('Invoice not found', 404);
+      const message = errorMessage(err);
+      if (message) return renderInvoice(c, id, { error: message, form: op === 'manual' ? manual : undefined, status: 422 });
       throw err;
     }
   });

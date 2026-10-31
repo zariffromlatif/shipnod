@@ -35,10 +35,21 @@ export interface Seller {
   webhookSecret: string;
   /** Seller's own estimate of what one failed COD delivery costs them; drives the "money saved" metric. */
   costPerFailedOrderBdt: number;
+  /** Billing cycle of the current paid period; null for comped accounts. */
+  planCycle: 'monthly' | 'annual' | null;
+  /** End of the prepaid period; null = no expiry (comped / pilot). */
+  planPaidUntil: string | null;
+  /** Price paid per day of the current period, used for upgrade credit. */
+  planDailyRate: number;
+  /** Account credit in BDT, applied to the next invoice. */
+  creditBdt: number;
+  /** "<paid_until>|<stage>" of the last renewal reminder sent. */
+  billingReminder: string | null;
   createdAt: string;
 }
 
-export type NewSeller = Omit<Seller, 'createdAt'> & { apiKeyHash: string };
+type BillingFields = 'planCycle' | 'planPaidUntil' | 'planDailyRate' | 'creditBdt' | 'billingReminder';
+export type NewSeller = Omit<Seller, 'createdAt' | BillingFields> & { apiKeyHash: string };
 export type SellerPatch = Partial<Omit<Seller, 'id' | 'createdAt'>>;
 
 export interface StoredOrder extends Order {
@@ -86,6 +97,8 @@ export interface UsageRow {
   riskChecks: number;
   smsSent: number;
   smsSegments: number;
+  /** Orders above the plan quota this period (billed later at the overage rate). */
+  overageOrders: number;
 }
 
 type Row = Record<string, unknown>;
@@ -102,6 +115,11 @@ const SELLER_COLUMNS: Record<keyof SellerPatch, string> = {
   autoBookCourier: 'auto_book_courier',
   webhookSecret: 'webhook_secret',
   costPerFailedOrderBdt: 'cost_per_failed_order_bdt',
+  planCycle: 'plan_cycle',
+  planPaidUntil: 'plan_paid_until',
+  planDailyRate: 'plan_daily_rate',
+  creditBdt: 'credit_bdt',
+  billingReminder: 'billing_reminder',
 };
 
 const ORDER_COLUMNS: Record<keyof OrderPatch, string> = {
@@ -140,6 +158,11 @@ function sellerFromRow(r: Row): Seller {
     autoBookCourier: strOrNull(r.auto_book_courier) as CourierId | null,
     webhookSecret: str(r.webhook_secret),
     costPerFailedOrderBdt: Number(r.cost_per_failed_order_bdt),
+    planCycle: strOrNull(r.plan_cycle) as Seller['planCycle'],
+    planPaidUntil: strOrNull(r.plan_paid_until),
+    planDailyRate: Number(r.plan_daily_rate ?? 0),
+    creditBdt: Number(r.credit_bdt ?? 0),
+    billingReminder: strOrNull(r.billing_reminder),
     createdAt: str(r.created_at),
   };
 }
@@ -513,14 +536,23 @@ export class Store {
   incrementUsage(sellerId: string, period: string, delta: Partial<UsageRow>): void {
     this.db
       .prepare(
-        `INSERT INTO usage (seller_id, period, orders, risk_checks, sms_sent, sms_segments) VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO usage (seller_id, period, orders, risk_checks, sms_sent, sms_segments, overage_orders) VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (seller_id, period) DO UPDATE SET
            orders = orders + excluded.orders,
            risk_checks = risk_checks + excluded.risk_checks,
            sms_sent = sms_sent + excluded.sms_sent,
-           sms_segments = sms_segments + excluded.sms_segments`,
+           sms_segments = sms_segments + excluded.sms_segments,
+           overage_orders = overage_orders + excluded.overage_orders`,
       )
-      .run(sellerId, period, delta.orders ?? 0, delta.riskChecks ?? 0, delta.smsSent ?? 0, delta.smsSegments ?? 0);
+      .run(
+        sellerId,
+        period,
+        delta.orders ?? 0,
+        delta.riskChecks ?? 0,
+        delta.smsSent ?? 0,
+        delta.smsSegments ?? 0,
+        delta.overageOrders ?? 0,
+      );
   }
 
   getUsage(sellerId: string, period: string): UsageRow {
@@ -530,7 +562,12 @@ export class Store {
       riskChecks: Number(r?.risk_checks ?? 0),
       smsSent: Number(r?.sms_sent ?? 0),
       smsSegments: Number(r?.sms_segments ?? 0),
+      overageOrders: Number(r?.overage_orders ?? 0),
     };
+  }
+
+  listSellers(): Seller[] {
+    return (this.db.prepare('SELECT * FROM sellers ORDER BY created_at DESC').all() as Row[]).map(sellerFromRow);
   }
 
   // --------------------------------------------------------------- couriers

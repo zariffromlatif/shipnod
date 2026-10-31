@@ -159,6 +159,22 @@ describe('config', () => {
     expect(c.courierSandbox).toBe(true);
   });
 
+  it('reads billing settings and validates them', () => {
+    expect(loadConfig({ NODE_ENV: 'test' }).billing).toEqual({ sslcommerz: null, bkashNumber: null, nagadNumber: null });
+    const c = loadConfig({
+      NODE_ENV: 'test',
+      SSLCOMMERZ_STORE_ID: 'shop',
+      SSLCOMMERZ_STORE_PASSWORD: 'pw',
+      BILLING_BKASH_NUMBER: '+880 1900-000001',
+      ADMIN_PASSWORD: 'long-enough-password',
+    });
+    expect(c.billing).toEqual({ sslcommerz: { storeId: 'shop', storePassword: 'pw', sandbox: true }, bkashNumber: '01900000001', nagadNumber: null });
+    expect(c.adminPassword).toBe('long-enough-password');
+    expect(() => loadConfig({ NODE_ENV: 'test', SSLCOMMERZ_STORE_ID: 'shop' })).toThrow(/SSLCOMMERZ/);
+    expect(() => loadConfig({ NODE_ENV: 'test', BILLING_BKASH_NUMBER: '123' })).toThrow(/BILLING_BKASH_NUMBER/);
+    expect(() => loadConfig({ NODE_ENV: 'test', ADMIN_PASSWORD: 'short' })).toThrow(/ADMIN_PASSWORD/);
+  });
+
   it('refuses to start production without real secrets', () => {
     expect(() => loadConfig({ NODE_ENV: 'production' })).toThrow(/NETWORK_HASH_SECRET/);
     expect(() =>

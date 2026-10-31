@@ -139,4 +139,62 @@ export const MIGRATIONS: readonly string[] = [
   -- Masked form ("017****5678") so sellers can recognise blocked numbers; the hash stays the key.
   ALTER TABLE blocklist ADD COLUMN phone_masked TEXT;
   `,
+  // 3: billing — prepaid subscriptions, invoices, payments (SSLCommerz + manual bKash/Nagad), admin sessions.
+  `
+  -- plan_paid_until NULL = no expiry (comped account or pilot granted by an admin).
+  ALTER TABLE sellers ADD COLUMN plan_cycle TEXT;
+  ALTER TABLE sellers ADD COLUMN plan_paid_until TEXT;
+  ALTER TABLE sellers ADD COLUMN plan_daily_rate REAL NOT NULL DEFAULT 0;
+  ALTER TABLE sellers ADD COLUMN credit_bdt INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE sellers ADD COLUMN billing_reminder TEXT;
+
+  -- Overage is recorded when it happens (against the plan active at that moment), billed on the next invoice.
+  ALTER TABLE usage ADD COLUMN overage_orders INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE usage ADD COLUMN overage_invoice_id TEXT;
+
+  CREATE TABLE invoices (
+    id                  TEXT PRIMARY KEY,
+    number              TEXT NOT NULL UNIQUE,
+    seller_id           TEXT NOT NULL REFERENCES sellers(id),
+    status              TEXT NOT NULL CHECK (status IN ('open', 'paid', 'void')),
+    plan                TEXT NOT NULL,
+    cycle               TEXT NOT NULL CHECK (cycle IN ('monthly', 'annual')),
+    lines_json          TEXT NOT NULL,
+    subtotal_bdt        INTEGER NOT NULL,
+    proration_credit_bdt INTEGER NOT NULL,
+    balance_credit_bdt  INTEGER NOT NULL,
+    credit_applied_bdt  INTEGER NOT NULL,
+    total_bdt           INTEGER NOT NULL,
+    created_at          TEXT NOT NULL,
+    expires_at          TEXT NOT NULL,
+    paid_at             TEXT,
+    payment_method      TEXT
+  );
+  CREATE INDEX invoices_seller ON invoices (seller_id, created_at);
+
+  CREATE TABLE payments (
+    id          TEXT PRIMARY KEY,
+    invoice_id  TEXT NOT NULL REFERENCES invoices(id),
+    seller_id   TEXT NOT NULL REFERENCES sellers(id),
+    method      TEXT NOT NULL CHECK (method IN ('sslcommerz', 'bkash', 'nagad', 'credit')),
+    status      TEXT NOT NULL CHECK (status IN ('initiated', 'pending_review', 'succeeded', 'failed', 'rejected')),
+    amount_bdt  INTEGER NOT NULL,
+    reference   TEXT,
+    payer_phone TEXT,
+    detail      TEXT,
+    raw_json    TEXT,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+  );
+  -- A bKash/Nagad TrxID (or gateway bank transaction) can only ever pay once.
+  CREATE UNIQUE INDEX payments_reference ON payments (method, reference) WHERE reference IS NOT NULL AND status != 'rejected';
+  CREATE INDEX payments_status ON payments (status, created_at);
+  CREATE INDEX payments_invoice ON payments (invoice_id);
+
+  CREATE TABLE admin_sessions (
+    token_hash TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  );
+  `,
 ];

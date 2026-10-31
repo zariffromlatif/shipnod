@@ -46,7 +46,7 @@ Requires Node.js ≥ 22.13 (uses the built-in `node:sqlite`; there are no native
 ```bash
 npm install
 cp .env.example .env            # dev defaults work as-is
-npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --phone 01712345678
+npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --trial-days 14 --phone 01712345678
 npm run dev                     # http://localhost:8787
 ```
 
@@ -81,7 +81,7 @@ DATABASE_PATH=./data/demo.db npm run dev
 | Settings `/app/settings` | Shop name, SMS language with a cost preview, bKash number and advance fee, auto-booking, risk thresholds (Growth+), courier accounts, webhook URLs, blocklist, plan usage |
 
 ```bash
-npm test          # 85 tests: risk engine, adapters, webhooks, API loop, dashboard
+npm test          # 108 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
 npm run typecheck
 npm run build && npm start
 ```
@@ -114,6 +114,23 @@ All `/v1` routes need `Authorization: Bearer <api key>`.
 
 Overage costs ৳1.5 per order. Annual plans get 2 months free. Paid onboarding (৳3,000–5,000) brings in cash from week one. Limits are enforced in [`src/billing/plans.ts`](src/billing/plans.ts).
 
+## Billing
+
+Sellers buy prepaid periods at **`/app/billing`**: monthly is 30 days, annual is 365 days for 10× the monthly price. bKash and Nagad can't be charged automatically, so there is no auto-renewal. Renewal reminders go out by SMS 5 days and 1 day before expiry. After expiry there is a 3-day grace period, then the account drops to Free limits. The plan they bought is kept, so renewing restores it.
+
+| How sellers pay | How it settles |
+|-----------------|----------------|
+| **Online via SSLCommerz** (bKash, Nagad, Rocket, cards, internet banking) | Automatic. Every return and IPN is re-checked against SSLCommerz's validation API: amount, currency and transaction id must match. Payments SSLCommerz flags as risky wait for review. |
+| **bKash / Nagad Send Money + TrxID** | The seller submits the TrxID. You check it in your bKash/Nagad app and approve it in `/admin`. A TrxID can only ever pay once. This works on day one, before your SSLCommerz merchant account is approved. |
+| **Account credit** | Invoices fully covered by credit activate immediately. |
+
+- **Upgrades:** unused days of the current plan are deducted from the new invoice. Downgrades turn the unused value into account credit.
+- **Overage:** each extra order is recorded at the moment it happens, against the plan active then, and billed once on the next invoice.
+- **Invoices:** one open invoice per seller, valid for 24 hours, numbered `SN-YYYY-NNNNN`. Paid invoices double as receipts.
+- **Admin console (`/admin`, enabled by `ADMIN_PASSWORD`):** MRR, revenue, payments waiting for review (approve/reject, and the seller gets an SMS), every seller's plan status, and "set plan" for pilots and comps.
+- **Pilots:** `npm run seller:create -- … --plan growth --trial-days 14`, or "set plan" in `/admin`.
+- **Configuration:** `SSLCOMMERZ_*`, `BILLING_BKASH_NUMBER`, `BILLING_NAGAD_NUMBER` and `ADMIN_PASSWORD` in `.env.example`. Leave a payment method unset to hide it.
+
 ## Before going live
 
 - [ ] **Verify each courier adapter against its sandbox / merchant docs.** The endpoints follow the couriers' merchant APIs as used by community SDKs. They are unit-tested against mocks, not against live accounts.
@@ -121,6 +138,8 @@ Overage costs ৳1.5 per order. Annual plans get 2 months free. Paid onboarding 
 - [ ] Generate production secrets: `openssl rand -hex 32` for `NETWORK_HASH_SECRET` and `APP_ENCRYPTION_KEY`. The server refuses to start in production without them.
 - [ ] Publish Terms of Service and a privacy policy that cover sharing delivery outcomes across the network, and have a lawyer check them against current Bangladeshi data-protection rules.
 - [ ] Use a short domain for `PUBLIC_BASE_URL`. Every character of a Bangla SMS costs money.
+- [ ] **Billing:** apply for an SSLCommerz merchant account (needs a trade license and bank account) and test with a sandbox store from developer.sslcommerz.com first. Until it's approved, use manual bKash/Nagad with `ADMIN_PASSWORD` set.
+- [ ] Ask an accountant whether the prices should include VAT, and whether the invoices need to be in the official VAT invoice (Mushak) format, before you issue invoices at scale.
 
 ## License
 

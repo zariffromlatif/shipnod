@@ -38,6 +38,15 @@ The dashboard is server-rendered by the same process, with no client-side framew
 - **Blocklist display:** blocked numbers are stored as an HMAC plus a masked form (`013****8888`), so sellers can recognise them without the raw number being kept.
 - **Visual rules:** the status colours (green, amber, orange, red) are reserved for risk levels, and each level also has its own glyph and text label, so colour never carries meaning alone. There is one large headline figure per page. Light and dark mode follow the device setting.
 
+## Billing
+
+- **Model:** prepaid periods (30 or 365 days). Bangladeshi wallets can't be charged automatically. The *effective* plan (`subscriptionState`) drives every limit: Growth that expired more than 3 days ago behaves like Free, while the purchased plan is remembered for renewal.
+- **Flow:** quote → invoice (one open per seller, 24 h) → payment → `settle()`. Settling runs in one transaction. It activates the plan, stacks a same-plan renewal onto the current end date, moves credit, and marks overage periods billed. A second payment for an already-paid invoice becomes account credit. Money is never lost.
+- **SSLCommerz:** callbacks are untrusted input. The browser return and the IPN both lead to the server-to-server validation API, and amount, currency and `tran_id` must match. Everything after that network call is synchronous, so a redirect and an IPN for the same payment can't both activate the plan. `risk_level = 1` goes to manual review.
+- **Manual bKash/Nagad:** the seller submits the TrxID and payer number. You approve or reject it in `/admin`, and the seller gets an SMS either way. TrxIDs are unique among non-rejected payments, so a rejected one can be retried but none can be reused.
+- **Admin:** `/admin` is enabled only when `ADMIN_PASSWORD` is set. Login takes a constant-time password check, locks for 15 minutes after 5 failures, and uses a hashed session token in a `SameSite=Strict` cookie scoped to `/admin`, with CSRF tokens on every form.
+- **Reminders:** an hourly job sends SMS at 5 days and 1 day before expiry, at the start of grace, and when the account drops to Free. Each one is sent at most once per paid period.
+
 ## Order pipeline
 
 ```
@@ -100,6 +109,11 @@ Default thresholds: medium 30, high 60, critical 80. Growth+ sellers can overrid
 | `sms_log` | Every SMS attempt with provider response |
 | `sessions` | Dashboard sessions: token **hash**, seller, expiry |
 | `login_codes` | SMS login codes: code **hash**, attempts, expiry, used-at |
+| `invoices` | One row per purchase attempt: plan, cycle, line items (plan + overage), credits, total, 24h expiry, paid-at |
+| `payments` | SSLCommerz / bKash / Nagad / credit attempts. A partial unique index stops a TrxID (or bank transaction) from paying twice |
+| `admin_sessions` | Admin console sessions: token **hash**, expiry |
+
+Sellers also carry their subscription (`plan_paid_until`, `plan_cycle`, `plan_daily_rate`, `credit_bdt`). `usage.overage_orders` and `overage_invoice_id` track extra orders until they are billed.
 
 Migrations are append-only SQL in `db/migrations.ts`, tracked with `PRAGMA user_version`.
 
@@ -134,7 +148,7 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
 
 ## Testing
 
-`npm test` runs 85 tests:
+`npm test` runs 108 tests:
 
 - Unit tests: phone formats, the state machine, SMS segmenting, crypto, plans and config guards.
 - Risk scenarios, including that reason points sum to the score.
@@ -145,3 +159,10 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
   - security: CSRF rejection, XSS escaping, seller isolation;
   - workflow: the full order flow through forms, tab, risk and Bangla-digit search filters;
   - settings: validation and plan gates.
+- Subscription maths: states, upgrade credit, renewal stacking (including during grace), MRR.
+- Billing end-to-end:
+  - SSLCommerz: payment activates the plan exactly once (browser return plus IPN); forged and underpaid callbacks are rejected; risky payments go to review; cancel and gateway errors are handled;
+  - manual payments: TrxID format checks, duplicate TrxID across sellers, approve, reject and retry;
+  - plan changes: upgrade credit, downgrade into credit, stacked renewals, overage recorded live and billed once;
+  - lifecycle: grace and expiry, each reminder sent once;
+  - admin: lockout, CSRF, disabled without a password.

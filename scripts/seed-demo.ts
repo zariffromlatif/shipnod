@@ -15,7 +15,7 @@ if (config.nodeEnv === 'production') {
   console.error('Refusing to seed demo data in production.');
   process.exit(1);
 }
-const { service, store } = buildService(config);
+const { service, store, billing } = buildService(config);
 
 const ADDRESSES = [
   'House 12, Road 5, Dhanmondi, Dhaka',
@@ -88,6 +88,17 @@ async function main() {
   await make('Faruk Mia', '01399998888', 1200, 4); // blocked -> hold
   await make('Prepaid Rina', '01755667788', 0, 0); // prepaid -> confirmed
   await make('Nasima Begum', '01811223344', 1750, 1); // good history -> confirmed
+
+  // Billing: Demo Fashion paid for Growth by bKash 26 days ago (4 days left → renewal banner),
+  // and Peer Shop 0 has a bKash payment waiting for admin review.
+  const inv = billing.createInvoice(service.findSeller(seller.id)!, 'growth', 'monthly');
+  const paid = billing.submitManualPayment(service.findSeller(seller.id)!, inv.id, { method: 'bkash', payerPhone: '01700000000', reference: 'DEMO9K2L4M' });
+  await billing.approvePayment(paid.id);
+  store.updateSeller(seller.id, { planPaidUntil: new Date(Date.now() + 4 * 86_400_000).toISOString() });
+  const peer = service.findSeller(others[0]!.id)!;
+  store.updateSeller(peer.id, { plan: 'free', phone: '01799887766' });
+  const peerInvoice = billing.createInvoice(service.findSeller(peer.id)!, 'starter', 'monthly');
+  billing.submitManualPayment(service.findSeller(peer.id)!, peerInvoice.id, { method: 'bkash', payerPhone: '01799887766', reference: '8HX2TQ7P1A' });
 
   store.close();
   console.log(`

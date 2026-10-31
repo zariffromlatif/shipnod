@@ -153,6 +153,7 @@ export function overviewPage(d: OverviewData): Html {
     active: 'home',
     seller: d.seller,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <h1>${d.seller.shopName}</h1>
       <p class="muted">গত ${num(stats.days)} দিনের হিসাব · প্ল্যান: ${usage.plan.name}</p>
@@ -242,6 +243,7 @@ export function ordersPage(d: {
     active: 'orders',
     seller: d.seller,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <div class="actions" style="justify-content:space-between"><h1>অর্ডার</h1><a class="btn primary" href="/app/orders/new">+ নতুন অর্ডার</a></div>
       <nav class="tabs" aria-label="অর্ডারের অবস্থা">
@@ -352,6 +354,7 @@ function actionsCard(order: StoredOrder, couriers: CourierId[], csrf: string): H
 
 export function orderDetailPage(d: {
   seller: Seller;
+  now?: Date;
   csrf: string;
   order: StoredOrder;
   events: Array<{ from: string | null; to: string; actor: string; detail: string | null; at: string }>;
@@ -366,6 +369,7 @@ export function orderDetailPage(d: {
     active: 'orders',
     seller: d.seller,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <p class="small"><a href="/app/orders">← সব অর্ডার</a></p>
       <div class="actions" style="justify-content:space-between;align-items:center">
@@ -420,7 +424,7 @@ export interface NewOrderValues {
   items?: Array<{ name?: string; quantity?: string; unitPrice?: string }>;
 }
 
-export function newOrderPage(d: { seller: Seller; csrf: string; values?: NewOrderValues; error?: string }): Html {
+export function newOrderPage(d: { seller: Seller; csrf: string; now?: Date; values?: NewOrderValues; error?: string }): Html {
   const v = d.values ?? {};
   const items = [0, 1, 2].map((i) => v.items?.[i] ?? {});
   return page({
@@ -428,6 +432,7 @@ export function newOrderPage(d: { seller: Seller; csrf: string; values?: NewOrde
     active: 'new',
     seller: d.seller,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <h1>নতুন অর্ডার</h1>
       <p class="muted">ফেসবুক পেজ বা ফোনে পাওয়া অর্ডার এখানে লিখুন। সেভ করলেই ঝুঁকি যাচাই হবে আর দরকার হলে কাস্টমারকে SMS যাবে।</p>
@@ -463,6 +468,7 @@ export function newOrderPage(d: { seller: Seller; csrf: string; values?: NewOrde
 
 export function checkPage(d: {
   seller: Seller;
+  now?: Date;
   csrf: string;
   phone?: string;
   error?: string;
@@ -474,6 +480,7 @@ export function checkPage(d: {
     active: 'check',
     seller: d.seller,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <h1>কাস্টমার চেক</h1>
       <p class="muted">অর্ডার নেওয়ার আগে নম্বরটির ডেলিভারি রেকর্ড দেখুন। প্রতিটি চেক মাসিক সীমা থেকে কাটে।</p>
@@ -524,6 +531,7 @@ const COURIER_NAME: Record<CourierId, string> = { steadfast: 'Steadfast', pathao
 
 export function settingsPage(d: {
   seller: Seller;
+  now?: Date;
   csrf: string;
   plan: Plan;
   usage: { period: string; usage: UsageRow; overageBdt: number };
@@ -547,6 +555,7 @@ export function settingsPage(d: {
     active: 'settings',
     seller: s,
     csrf: d.csrf,
+    now: d.now,
     body: html`
       <h1>সেটিংস</h1>
       ${flash('ok', d.message)} ${flash('error', d.error)}

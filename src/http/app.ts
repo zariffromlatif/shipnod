@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { Hono, type Context } from 'hono';
 import { z, ZodError } from 'zod';
-import { planOf } from '../billing/plans.js';
 import type { Seller } from '../db/store.js';
 import { InvalidTransitionError } from '../domain/order-state.js';
 import { COURIER_IDS, ORDER_STATUSES, type OrderInput } from '../domain/types.js';
 import { mapShopifyOrder, verifyShopifySignature } from '../integrations/shopify.js';
 import { mapWooOrder, verifyWooSignature } from '../integrations/woocommerce.js';
 import { AppError } from '../lib/errors.js';
+import type { BillingRepo } from '../db/billing-repo.js';
 import type { AuthService } from '../services/auth.js';
+import type { BillingService } from '../services/billing.js';
+import { createAdmin } from './admin.js';
 import type { ShipnodService } from '../services/shipnod.js';
 import { createDashboard } from './dashboard/routes.js';
 import { confirmationPage, notFoundPage } from './pages.js';
@@ -96,14 +98,24 @@ async function jsonBody<T extends z.ZodTypeAny>(c: Context, schema: T): Promise<
   return schema.parse(raw);
 }
 
+export interface AppDeps {
+  service: ShipnodService;
+  auth: AuthService;
+  billing: BillingService;
+  billingRepo: BillingRepo;
+}
+
 export interface AppOptions {
   publicBaseUrl: string;
   /** Secure session cookies; true in production (HTTPS). */
   secureCookies: boolean;
+  /** Enables /admin when set. */
+  adminPassword?: string | null;
   now?: () => Date;
 }
 
-export function createApp(service: ShipnodService, auth: AuthService, opts: AppOptions): Hono<Env> {
+export function createApp(deps: AppDeps, opts: AppOptions): Hono<Env> {
+  const { service, auth, billing } = deps;
   const app = new Hono<Env>();
   const landing = loadLanding();
 
@@ -165,8 +177,10 @@ export function createApp(service: ShipnodService, auth: AuthService, opts: AppO
         : verifyShopifySignature(seller.webhookSecret, raw, signature);
     if (!valid) throw new AppError(401, 'bad_signature', 'Webhook signature mismatch');
 
-    if (!planOf(seller.plan).storeIntegrations) {
-      throw new AppError(402, 'plan_required', 'Store integrations need the Growth plan or above');
+    // Answer 200 even when the plan doesn't allow it: WooCommerce disables webhooks after repeated
+    // failures, which would silently break the integration once the seller renews.
+    if (!service.planFor(seller).storeIntegrations) {
+      return c.json({ ok: false, ignored: 'plan_required', message: 'Store integrations need an active Growth plan or above' });
     }
     let input: OrderInput;
     try {
@@ -197,7 +211,8 @@ export function createApp(service: ShipnodService, auth: AuthService, opts: AppO
     const s = c.get('seller');
     return c.json({
       seller: s,
-      plan: planOf(s.plan),
+      plan: service.planFor(s),
+      subscription: service.subscription(s),
       webhooks: {
         woocommerce: `/webhooks/woocommerce/${s.id}`,
         shopify: `/webhooks/shopify/${s.id}`,
@@ -282,8 +297,31 @@ export function createApp(service: ShipnodService, auth: AuthService, opts: AppO
 
   api.get('/usage', (c) => c.json(service.usage(c.get('seller'))));
 
+  // ------------------------------------------------------- SSLCommerz returns
+
+  // SSLCommerz POSTs here from the payer's browser (success/fail/cancel) and server-to-server (ipn).
+  // Nothing in these bodies is trusted: BillingService re-validates val_id with SSLCommerz.
+  const gatewayFields = async (c: Context) => {
+    const form = await c.req.parseBody();
+    return Object.fromEntries(Object.entries(form).filter(([, v]) => typeof v === 'string')) as Record<string, string>;
+  };
+
+  app.post('/billing/sslcommerz/:result{success|fail|cancel}', async (c) => {
+    const result = c.req.param('result') as 'success' | 'fail' | 'cancel';
+    const { invoiceId, outcome } = await billing.handleSslcommerz(await gatewayFields(c), result);
+    return c.redirect(invoiceId ? `/app/billing/invoices/${invoiceId}?msg=${outcome}` : '/app/billing', 303);
+  });
+
+  app.post('/billing/sslcommerz/ipn', async (c) => {
+    const { outcome } = await billing.handleSslcommerz(await gatewayFields(c), 'ipn');
+    return c.json({ ok: true, outcome });
+  });
+
   app.route('/v1', api);
-  app.route('/app', createDashboard(service, auth, opts));
+  app.route('/app', createDashboard(service, auth, billing, opts));
+  if (opts.adminPassword) {
+    app.route('/admin', createAdmin(billing, deps.billingRepo, { password: opts.adminPassword, secureCookies: opts.secureCookies, now: opts.now }));
+  }
   return app;
 }
 
