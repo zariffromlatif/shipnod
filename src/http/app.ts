@@ -8,7 +8,7 @@ import { COURIER_IDS, ORDER_STATUSES, type OrderInput } from '../domain/types.js
 import { mapShopifyOrder, verifyShopifySignature } from '../integrations/shopify.js';
 import { mapWooOrder, verifyWooSignature } from '../integrations/woocommerce.js';
 import { AppError } from '../lib/errors.js';
-import type { NishchitService } from '../services/nishchit.js';
+import type { ShipnodService } from '../services/shipnod.js';
 import { confirmationPage, notFoundPage } from './pages.js';
 
 type Env = { Variables: { seller: Seller } };
@@ -80,7 +80,7 @@ function loadLanding(): string {
   try {
     return readFileSync(new URL('../../public/index.html', import.meta.url), 'utf8');
   } catch {
-    return '<!doctype html><title>Nishchit</title><p>Nishchit API</p>';
+    return '<!doctype html><title>Shipnod</title><p>Shipnod API</p>';
   }
 }
 
@@ -94,7 +94,7 @@ async function jsonBody<T extends z.ZodTypeAny>(c: Context, schema: T): Promise<
   return schema.parse(raw);
 }
 
-export function createApp(service: NishchitService): Hono<Env> {
+export function createApp(service: ShipnodService): Hono<Env> {
   const app = new Hono<Env>();
   const landing = loadLanding();
 

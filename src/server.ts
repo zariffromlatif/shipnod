@@ -8,7 +8,7 @@ const { store, service } = buildService(config);
 const app = createApp(service);
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`Nishchit listening on http://localhost:${info.port} (${config.nodeEnv}, sms=${config.sms.provider})`);
+  console.log(`Shipnod listening on http://localhost:${info.port} (${config.nodeEnv}, sms=${config.sms.provider})`);
 });
 
 let syncTimer: NodeJS.Timeout | undefined;

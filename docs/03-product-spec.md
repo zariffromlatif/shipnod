@@ -115,7 +115,7 @@ These are the exact templates in `src/confirmation/messages.ts` (the code is the
 | Metric | Definition |
 |--------|------------|
 | RTO rate | returned ÷ (delivered + returned), per period, per courier, per district |
-| Baseline RTO | seller's RTO rate in the 30 days before Nishchit (from import or onboarding interview) |
+| Baseline RTO | seller's RTO rate in the 30 days before Shipnod (from import or onboarding interview) |
 | Confirmation rate | confirmed ÷ confirmation requests sent |
 | Cancelled before shipping | orders cancelled via the link: costs avoided entirely |
 | Money saved (estimate) | (baseline RTO − current RTO) × shipped orders × cost per failed order (seller-set, default 150 BDT) |
@@ -134,8 +134,8 @@ These are the exact templates in `src/confirmation/messages.ts` (the code is the
 
 ## Non-goals
 
-- Nishchit is **not a courier** and does not handle parcels.
-- Nishchit is **not a payment processor**: advance payments go to the seller's own bKash; Nishchit does not hold customer money.
+- Shipnod is **not a courier** and does not handle parcels.
+- Shipnod is **not a payment processor**: advance payments go to the seller's own bKash; Shipnod does not hold customer money.
 - Not a storefront or website builder.
 - **No scraping** of courier merchant portals or use of seller courier logins to pull data.
 - Not a public lookup service for individuals, and not a credit score for lending or any non-delivery purpose.

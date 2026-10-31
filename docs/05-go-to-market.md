@@ -63,7 +63,7 @@ Track these every week in one sheet.
 
 ## Messaging pillars
 
-1. **Money first:** "A returned parcel costs you around 150 taka. Nishchit stops many of them before they leave your shop." (Use the seller's own number in demos.)
+1. **Money first:** "A returned parcel costs you around 150 taka. Shipnod stops many of them before they leave your shop." (Use the seller's own number in demos.)
 2. **Less calling:** "Your staff only call the orders that need a call."
 3. **Works with what you use:** Steadfast, Pathao, RedX, WooCommerce, Shopify, Facebook page.
 4. **Proof, not promises:** free pilot measured against your own baseline, money back if returns do not drop.

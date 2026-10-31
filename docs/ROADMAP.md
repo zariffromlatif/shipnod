@@ -40,7 +40,7 @@ Each release ships only after the previous one is used by paying sellers. Dates 
 
 ## v0.4 — Expansion
 
-- [ ] Bangla AI sales assistant (module B): answer price/stock questions in Messenger and comments, capture orders straight into Nishchit
+- [ ] Bangla AI sales assistant (module B): answer price/stock questions in Messenger and comments, capture orders straight into Shipnod
 - [ ] Multi-user accounts with roles (owner, ops, caller)
 - [ ] Migrate SQLite to Postgres when the base passes roughly 500 sellers or write load requires it
 - [ ] Learned risk model trained on network outcomes (keep explanations)

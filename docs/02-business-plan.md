@@ -2,7 +2,7 @@
 
 ## One-liner
 
-**Nishchit (নিশ্চিত, "confirmed") helps Bangladeshi online sellers ship only the cash-on-delivery orders that will actually be accepted.** It scores each order for return risk, confirms it automatically by SMS in Bangla, books Steadfast, Pathao or RedX in one click, and learns from every delivery outcome across all sellers on the network.
+**Shipnod ("get the customer's nod before you ship") helps Bangladeshi online sellers ship only the cash-on-delivery orders that will actually be accepted.** It scores each order for return risk, confirms it automatically by SMS in Bangla, books Steadfast, Pathao or RedX in one click, and learns from every delivery outcome across all sellers on the network.
 
 ## The problem
 
@@ -24,14 +24,14 @@ The plan uses **150 BDT per failed order** as the working figure.
 
 ### Worked ROI example
 
-| | Before Nishchit | With Nishchit (target) |
+| | Before Shipnod | With Shipnod (target) |
 |--|-----------------|------------------------|
 | Orders shipped per month | 1,000 | 1,000 |
 | RTO rate | 25% | 15% |
 | Failed deliveries | 250 | 150 |
 | Loss at 150 BDT each | **37,500 BDT/month** | **22,500 BDT/month** |
 | Saving | | **15,000 BDT/month** |
-| Nishchit Growth plan | | 2,490 BDT/month |
+| Shipnod Growth plan | | 2,490 BDT/month |
 | Return on subscription | | **about 6x** |
 
 The 10-point RTO reduction is a **target to be measured in pilots**, not a proven result. The pilot offer (see [06-sales-playbook.md](06-sales-playbook.md)) measures it against each seller's own baseline.
@@ -46,7 +46,7 @@ Below 300 orders/month, the loss is too small to justify a subscription (the Fre
 
 Full detail in [03-product-spec.md](03-product-spec.md).
 
-1. **Risk check** by phone number: own-store history plus shared, HMAC-hashed delivery history across all Nishchit sellers, plus order signals.
+1. **Risk check** by phone number: own-store history plus shared, HMAC-hashed delivery history across all Shipnod sellers, plus order signals.
 2. **Order inbox:** orders arrive from WooCommerce/Shopify webhooks, CSV import, manual entry or the API.
 3. **Risk-based action:** low risk ships automatically; medium risk gets an SMS confirm/cancel link in Bangla; high risk is asked to pay the delivery charge in advance via bKash; critical risk is held or blocked.
 4. **One-click courier booking** with Steadfast, Pathao and RedX.
@@ -133,7 +133,7 @@ Decide on evidence, not hope.
 
 ## Competition and positioning
 
-| Alternative | What it does | Weakness | Nishchit's position |
+| Alternative | What it does | Weakness | Shipnod's position |
 |-------------|--------------|----------|---------------------|
 | Free fraud-checker plugins, extensions and packages ([example](https://wordpress.org/plugins/naimur-courier-ratio-checker/), [example](https://chromewebstore.google.com/detail/gheeoaoabeafpehidgeihdobbfmcneii), [example](https://packagist.org/packages/azmolla/fraud-checker-bd-courier)) | Look up a phone number's courier success ratio | Manual, single feature, does not act on the result, often fragile | Automatic check on every order, then action, then booking, then outcome |
 | [eGrow](https://www.egrow.com/en/blog/bangladesh-cod-whatsapp-2026) | COD operations platform across several markets | Broad multi-market product, not Bangladesh-only | Bangladesh-native, Bangla-first, BDT pricing, local support in person |
@@ -143,7 +143,7 @@ Decide on evidence, not hope.
 
 **Moat, in order of strength:**
 
-1. **Network data effect.** Every delivered or returned parcel on Nishchit improves risk scores for every seller. A new competitor starts with no data.
+1. **Network data effect.** Every delivered or returned parcel on Shipnod improves risk scores for every seller. A new competitor starts with no data.
 2. **Closed loop.** Check, confirm, book and learn in one place, so switching means rebuilding the workflow.
 3. **Local fit.** Bangla UX and messages, bKash/Nagad billing, in-person onboarding in Dhaka.
 4. **Integrations.** Steadfast, Pathao, RedX, WooCommerce, Shopify, and later WhatsApp and voice.

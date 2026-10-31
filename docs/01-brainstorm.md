@@ -21,7 +21,7 @@ A project earns money reliably when most of these are true:
 
 | ID | Idea | One-line description |
 |----|------|----------------------|
-| A | **Nishchit — COD order-ops for Bangladeshi sellers** | Score every cash-on-delivery order for return risk, auto-confirm it by SMS (Bangla), book the courier in one click, and learn from each delivery outcome across all sellers. |
+| A | **Shipnod — COD order-ops for Bangladeshi sellers** | Score every cash-on-delivery order for return risk, auto-confirm it by SMS (Bangla), book the courier in one click, and learn from each delivery outcome across all sellers. |
 | B | Bangla AI sales assistant for Facebook pages / WhatsApp | Auto-reply to "price?" comments and DMs in Bangla, capture orders, hand off to staff. |
 | C | Global Shopify COD-confirmation app | WhatsApp/SMS confirmation for COD orders, sold through the Shopify App Store in USD. |
 | D | AI automation agency / productized services for foreign SMBs | Build chatbots, automations and integrations for clients abroad, paid per project or retainer. |
@@ -49,7 +49,7 @@ Scores are 1 (bad) to 5 (good). "Competition" is inverse: 5 means little effecti
 
 ### Notes on the scores
 
-- **A — Nishchit.** Every returned COD parcel costs the seller a forward delivery charge, a return charge, packaging and the ad spend that bought the order. That loss is visible every month, so ROI is easy to show. Sellers are concentrated in reachable Facebook groups. Payment is local (bKash, Nagad, SSLCommerz). A Bangla-speaking founder in Dhaka can sit with sellers, which a foreign competitor cannot. Competition exists (see below), which is why it scores 3, not 5. ARPU in BDT is modest, which caps scalability at 3 until the product expands.
+- **A — Shipnod.** Every returned COD parcel costs the seller a forward delivery charge, a return charge, packaging and the ad spend that bought the order. That loss is visible every month, so ROI is easy to show. Sellers are concentrated in reachable Facebook groups. Payment is local (bKash, Nagad, SSLCommerz). A Bangla-speaking founder in Dhaka can sit with sellers, which a foreign competitor cannot. Competition exists (see below), which is why it scores 3, not 5. ARPU in BDT is modest, which caps scalability at 3 until the product expands.
 - **B — Bangla AI sales assistant.** Same buyers as A, so reachability and rails are equally good. Pain is real (staff spend hours answering "price?"), but it is harder to put a taka number on, many chatbot tools already exist, and LLM quality in Bangla still needs work. **It is the natural cross-sell module after A**, not the starting point.
 - **C — Global Shopify COD app.** Proven demand: several COD-confirmation apps charge USD monthly fees. But the category is crowded, ranking in the App Store takes months, and getting Shopify partner payouts into Bangladesh adds friction.
 - **D — Services.** Fastest cash for a skilled developer, and payable via Payoneer or wire. But revenue stops when the founder stops working, and it does not compound. Useful as a bridge, not as the project.
@@ -59,12 +59,12 @@ Scores are 1 (bad) to 5 (good). "Competition" is inverse: 5 means little effecti
 
 ## Decision
 
-**Build A (Nishchit).** It has the best combination of a cash-denominated pain, reachable buyers, local payment rails and a local founder advantage.
+**Build A (Shipnod).** It has the best combination of a cash-denominated pain, reachable buyers, local payment rails and a local founder advantage.
 
 Two honest caveats are built into the plan:
 
-1. **D is the fastest cash, so we borrow its strength without becoming an agency.** Nishchit charges a one-time paid onboarding/setup fee (3,000–5,000 BDT) for courier and store integration and historical data import. That brings in cash in the first weeks while the subscription base grows.
-2. **B is the planned second module** (roadmap v0.4). Once sellers trust Nishchit with their orders, a Bangla sales assistant that captures orders directly into Nishchit raises ARPU without new acquisition cost.
+1. **D is the fastest cash, so we borrow its strength without becoming an agency.** Shipnod charges a one-time paid onboarding/setup fee (3,000–5,000 BDT) for courier and store integration and historical data import. That brings in cash in the first weeks while the subscription base grows.
+2. **B is the planned second module** (roadmap v0.4). Once sellers trust Shipnod with their orders, a Bangla sales assistant that captures orders directly into Shipnod raises ARPU without new acquisition cost.
 
 ## Evidence
 
@@ -83,7 +83,7 @@ All of these are external sources. Vendor and community pages are marketing mate
 
 - **Demand is validated.** Many people have independently built COD fraud checkers for Bangladesh: plugins, extensions, packages, Shopify apps. People do not build that many tools for a problem nobody has.
 - **A phone lookup on its own is commoditised.** Several of these tools are free and single-purpose. Competing on "check a number" alone would be a race to zero.
-- **Nishchit's angle is the closed loop:** check the customer, then confirm the order automatically, then book the courier, then record the delivery outcome. Each outcome improves the shared network data, which improves the next check. Single-feature checkers do not get better with use; Nishchit does.
+- **Shipnod's angle is the closed loop:** check the customer, then confirm the order automatically, then book the courier, then record the delivery outcome. Each outcome improves the shared network data, which improves the next check. Single-feature checkers do not get better with use; Shipnod does.
 
 ### What we do not know yet (verify in the first 30 days)
 

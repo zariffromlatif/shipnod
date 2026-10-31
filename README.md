@@ -1,6 +1,8 @@
-# Nishchit (নিশ্চিত)
+# Shipnod
 
-**Stop paying for parcels that come back.** Nishchit scores every cash-on-delivery order for return risk, gets the customer to confirm by SMS (in Bangla), books Steadfast / Pathao / RedX in one call, and learns from every delivery outcome across all sellers.
+*Get the customer's nod before you ship.*
+
+**Stop paying for parcels that come back.** Shipnod scores every cash-on-delivery order for return risk, gets the customer to confirm by SMS (in Bangla), books Steadfast / Pathao / RedX in one call, and learns from every delivery outcome across all sellers.
 
 Built for Bangladeshi online sellers: Facebook-page (F-commerce) shops, WooCommerce and Shopify stores doing 300–5,000 COD orders a month.
 
@@ -78,7 +80,7 @@ All `/v1` routes need `Authorization: Bearer <api key>`.
 | `POST /v1/orders/:id/actions` | `confirm` · `cancel` (`customerRefused`) · `hold` · `advance_received` |
 | `POST /v1/orders/:id/resend` | New link + SMS |
 | `POST /v1/orders/:id/book` | Book with a courier (`courier`, `area`, `weightKg`) |
-| `POST /v1/orders/:id/outcome` | Record `delivered` / `returned` for parcels shipped outside Nishchit |
+| `POST /v1/orders/:id/outcome` | Record `delivered` / `returned` for parcels shipped outside Shipnod |
 | `PUT /v1/couriers/:courier` · `GET /v1/couriers` | Connect courier credentials (encrypted at rest) |
 | `POST /v1/blocklist` · `DELETE /v1/blocklist/:phone` | Seller blocklist |
 | `GET /v1/stats?days=30` · `GET /v1/usage` | RTO rate, money saved · plan usage and overage |

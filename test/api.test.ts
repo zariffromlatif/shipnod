@@ -3,7 +3,7 @@ import { ConsoleSmsProvider } from '../src/confirmation/sms.js';
 import { Store } from '../src/db/store.js';
 import { createApp } from '../src/http/app.js';
 import { SecretBox, signBase64Hmac } from '../src/lib/crypto.js';
-import { NishchitService } from '../src/services/nishchit.js';
+import { ShipnodService } from '../src/services/shipnod.js';
 import type { PlanId } from '../src/billing/plans.js';
 
 const ADDRESS = 'House 12, Road 5, Dhanmondi, Dhaka';
@@ -26,7 +26,7 @@ function setup() {
   const clock = { now: new Date() };
   clock.now.setUTCHours(8, 0, 0, 0); // 14:00 in Dhaka: keeps LATE_NIGHT out of the scores
 
-  const service = new NishchitService({
+  const service = new ShipnodService({
     store,
     sms,
     secretBox: new SecretBox('cd'.repeat(32)),
@@ -296,7 +296,7 @@ describe('store webhooks', () => {
 
 describe('public pages', () => {
   it('serves the landing page and health check', async () => {
-    expect(await (await t.app.request('/')).text()).toContain('Nishchit');
+    expect(await (await t.app.request('/')).text()).toContain('Shipnod');
     expect(await (await t.app.request('/health')).json()).toEqual({ ok: true });
   });
 });

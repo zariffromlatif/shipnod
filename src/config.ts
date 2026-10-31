@@ -12,7 +12,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
   PUBLIC_BASE_URL: z.string().url().default('http://localhost:8787'),
-  DATABASE_PATH: z.string().default('./data/nishchit.db'),
+  DATABASE_PATH: z.string().default('./data/shipnod.db'),
   NETWORK_HASH_SECRET: z.string().optional(),
   APP_ENCRYPTION_KEY: z.string().optional(),
   SMS_PROVIDER: z.enum(['console', 'http']).default('console'),

@@ -46,7 +46,7 @@ const CONFIRMABLE: readonly OrderStatus[] = ['new', 'awaiting_confirmation', 'aw
  * The order pipeline:  ingest → score → act (ship / confirm / advance / hold) → book → outcome → network.
  * Every state change is written to order_events so sellers (and disputes) can see exactly what happened.
  */
-export class NishchitService {
+export class ShipnodService {
   private readonly store: Store;
   private readonly now: () => Date;
 
@@ -410,7 +410,7 @@ export class NishchitService {
     }
   }
 
-  /** Manual outcome entry, for sellers who ship outside Nishchit (most F-commerce pages at first). */
+  /** Manual outcome entry, for sellers who ship outside Shipnod (most F-commerce pages at first). */
   recordOutcome(seller: Seller, orderId: string, outcome: 'delivered' | 'returned'): StoredOrder {
     const { order } = this.getOrder(seller, orderId);
     const updated = this.transition(order, outcome, 'seller');

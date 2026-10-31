@@ -16,21 +16,21 @@ A good prospect:
 
 > আসসালামু আলাইকুম। আপনার পেজটা দেখলাম, প্রোডাক্টগুলো দারুণ। একটা ছোট প্রশ্ন: মাসে মোটামুটি কতগুলো পার্সেল রিটার্ন আসে, আন্দাজ করে বলতে পারবেন?
 >
-> আমরা "নিশ্চিত" নামে একটা টুল বানিয়েছি। অর্ডার শিপ করার আগেই এটা কাস্টমারের ডেলিভারি হিস্ট্রি চেক করে, সন্দেহজনক অর্ডার SMS-এ কাস্টমারকে দিয়ে কনফার্ম করায়, আর এক ক্লিকে Steadfast/Pathao/RedX-এ বুক করে দেয়।
+> আমরা "Shipnod" নামে একটা টুল বানিয়েছি। অর্ডার শিপ করার আগেই এটা কাস্টমারের ডেলিভারি হিস্ট্রি চেক করে, সন্দেহজনক অর্ডার SMS-এ কাস্টমারকে দিয়ে কনফার্ম করায়, আর এক ক্লিকে Steadfast/Pathao/RedX-এ বুক করে দেয়।
 >
 > কয়েকজন সেলারের সাথে ১৪ দিনের ফ্রি পাইলট করছি। রিটার্ন না কমলে কোনো টাকা লাগবে না। ১০ মিনিট কথা বলা যাবে?
 >
-> — {আপনার নাম}, নিশ্চিত
+> — {আপনার নাম}, Shipnod
 
 ### First DM — English
 
 > Hi {name}, I came across your page and really like your products. Quick question: roughly how many parcels come back to you each month?
 >
-> We built Nishchit, a tool that checks a customer's delivery history before you ship, gets doubtful orders confirmed by the customer over SMS, and books Steadfast/Pathao/RedX in one click.
+> We built Shipnod, a tool that checks a customer's delivery history before you ship, gets doubtful orders confirmed by the customer over SMS, and books Steadfast/Pathao/RedX in one click.
 >
 > We're running a free 14-day pilot with a few sellers. If your returns don't go down, you pay nothing. Do you have 10 minutes for a quick call?
 >
-> — {your name}, Nishchit
+> — {your name}, Shipnod
 
 ### Follow-up (once, 2–3 days later) — Bangla
 
@@ -80,8 +80,8 @@ Only state "sellers we spoke with estimate 120–250 taka" after the week-1 inte
 | Objection | Response |
 |-----------|----------|
 | **"It's too expensive."** | "Starter is 990 taka a month. At about 150 taka per return, it pays for itself if it stops roughly 7 returned parcels a month. In the pilot you'll see the exact number before paying anything." |
-| **"I already call every customer myself."** | "Calling works, but it costs hours every day, and most of those customers were going to accept anyway. Nishchit lets confirmed and low-risk customers go through on their own and gives your caller a short list of only the risky ones. Your caller stays; they just stop wasting time." |
-| **"My courier already shows a success rate."** | "That check is useful, but it is typically one courier's data and someone has to look it up by hand for every order. Nishchit checks every order automatically, combines delivery outcomes across the sellers on our network with signals from the order itself, and then acts: confirmation SMS, advance-charge request or hold, before anything is booked." |
+| **"I already call every customer myself."** | "Calling works, but it costs hours every day, and most of those customers were going to accept anyway. Shipnod lets confirmed and low-risk customers go through on their own and gives your caller a short list of only the risky ones. Your caller stays; they just stop wasting time." |
+| **"My courier already shows a success rate."** | "That check is useful, but it is typically one courier's data and someone has to look it up by hand for every order. Shipnod checks every order automatically, combines delivery outcomes across the sellers on our network with signals from the order itself, and then acts: confirmation SMS, advance-charge request or hold, before anything is booked." |
 | **"Is my customer data safe? Will other sellers see my customers?"** | "No seller sees another seller's customers or orders. The shared network stores only a scrambled (hashed) version of phone numbers and how many parcels were delivered or returned, never names, addresses or what was ordered. You can ask us to delete your data at any time; it's in our privacy policy." |
 | **"Customers will get annoyed by SMS."** | "Low-risk customers don't get an SMS at all. The others get one short message with a confirm button, which also stops 'I never ordered this' disputes at the door." |
 | **"I'll think about it."** | "Of course. The pilot is free and setup takes about 30 minutes. Shall we start it now and decide after 14 days with real numbers?" |

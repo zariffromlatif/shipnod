@@ -18,12 +18,12 @@ src/
   integrations/   WooCommerce and Shopify webhook payload mapping + signature checks
   billing/        plans, limits, overage, billing period (Asia/Dhaka)
   db/             node:sqlite Store + migrations
-  services/       NishchitService: the order pipeline (the only place business rules live)
+  services/       ShipnodService: the order pipeline (the only place business rules live)
   http/           Hono app: seller API, webhooks, customer confirmation pages
   server.ts       process entry: HTTP server + courier status-sync timer
 ```
 
-The HTTP layer validates input (zod) and maps errors. All rules (plan limits, transitions, when to send SMS, when to record network outcomes) live in `NishchitService`, so a future dashboard, CSV importer or Chrome extension reuses the same pipeline.
+The HTTP layer validates input (zod) and maps errors. All rules (plan limits, transitions, when to send SMS, when to record network outcomes) live in `ShipnodService`, so a future dashboard, CSV importer or Chrome extension reuses the same pipeline.
 
 ## Order pipeline
 

@@ -27,7 +27,7 @@ export interface BookingResult {
   rawStatus: string;
 }
 
-/** Courier statuses collapsed to what Nishchit cares about. */
+/** Courier statuses collapsed to what Shipnod cares about. */
 export type NormalizedDeliveryStatus = 'pending' | 'in_transit' | 'delivered' | 'returned' | 'cancelled' | 'unknown';
 
 export interface StatusResult {

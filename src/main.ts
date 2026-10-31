@@ -2,7 +2,7 @@ import type { AppConfig } from './config.js';
 import { ConsoleSmsProvider, HttpTemplateSmsProvider, type SmsProvider } from './confirmation/sms.js';
 import { Store } from './db/store.js';
 import { SecretBox } from './lib/crypto.js';
-import { NishchitService } from './services/nishchit.js';
+import { ShipnodService } from './services/shipnod.js';
 
 /** Wires the object graph from config. Shared by the server and CLI scripts. */
 export function buildService(config: AppConfig, overrides: { sms?: SmsProvider; fetch?: typeof fetch; store?: Store } = {}) {
@@ -17,7 +17,7 @@ export function buildService(config: AppConfig, overrides: { sms?: SmsProvider; 
           successPattern: config.sms.successPattern,
         })
       : new ConsoleSmsProvider());
-  const service = new NishchitService({
+  const service = new ShipnodService({
     store,
     sms,
     secretBox: new SecretBox(config.encryptionKeyHex),

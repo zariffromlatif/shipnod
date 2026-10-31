@@ -31,7 +31,7 @@ button{width:100%;font:inherit;font-weight:600;padding:14px;border-radius:10px;b
 function layout(title: string, body: string): string {
   return `<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><style>${BASE_CSS}</style></head>
-<body><main>${body}<p class="brand">Nishchit · নিশ্চিত</p></main></body></html>`;
+<body><main>${body}<p class="brand">Shipnod</p></main></body></html>`;
 }
 
 const taka = (n: number) => `৳${toBanglaDigits(Math.round(n))}`;
