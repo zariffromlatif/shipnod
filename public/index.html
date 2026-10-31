@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nishchit — ফেরত পার্সেল কমান</title>
+<meta name="description" content="Cash-on-delivery order confirmation, customer risk checks and one-click courier booking for Bangladeshi online sellers.">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--muted:#5b6472;--line:#e3e6eb;--accent:#0b5cad;--accent-ink:#fff;--good:#0f7b4b;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#171b21;--ink:#e8ebef;--muted:#9aa3ae;--line:#2a3038;--accent:#5aa9ff;--accent-ink:#0f1216;--good:#22a06b;--bad:#f97066}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Noto Sans Bengali","Hind Siliguri",sans-serif}
+main{max-width:960px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.2;margin:0 0 12px}h2{font-size:1.35rem;margin:40px 0 12px}
+.lead{font-size:1.1rem;color:var(--muted);max-width:640px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h3{margin:0 0 6px;font-size:1.05rem}.card p{margin:0;color:var(--muted);font-size:.95rem}
+label{display:block;font-size:.9rem;color:var(--muted);margin-top:10px}
+input{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.out{font-size:1.05rem}.out strong{font-size:1.35rem}.bad{color:var(--bad)}.good{color:var(--good)}
+.price{font-size:1.6rem;font-weight:700}.price small{font-size:.9rem;font-weight:400;color:var(--muted)}
+ul{padding-left:18px;margin:8px 0 0;color:var(--muted);font-size:.93rem}
+.cta{display:inline-block;margin-top:18px;background:var(--accent);color:var(--accent-ink);padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600}
+.note{font-size:.82rem;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<main>
+  <h1>প্রতিটি ফেরত পার্সেলে টাকা হারানো বন্ধ করুন</h1>
+  <p class="lead">Nishchit ক্যাশ-অন-ডেলিভারি অর্ডার পাঠানোর আগেই কাস্টমারের ডেলিভারি রেকর্ড দেখে, SMS-এ অর্ডার কনফার্ম করায়, আর এক ক্লিকে Steadfast, Pathao বা RedX-এ বুক করে।<br>
+  <span lang="en">Stop paying for parcels that come back. Check the customer, confirm by SMS, book the courier.</span></p>
+  <a class="cta" href="#contact">১৪ দিন ফ্রি ট্রায়াল নিন</a>
+
+  <h2>কীভাবে কাজ করে</h2>
+  <div class="grid">
+    <div class="card"><h3>১. অর্ডার আসে</h3><p>WooCommerce, Shopify, CSV বা ফেসবুক পেজের অর্ডার ম্যানুয়ালি।</p></div>
+    <div class="card"><h3>২. ঝুঁকি যাচাই</h3><p>এই নম্বরের আগের ডেলিভারি/ফেরতের রেকর্ড, একই দিনে একাধিক অর্ডার, অস্পষ্ট ঠিকানা — কারণসহ স্কোর।</p></div>
+    <div class="card"><h3>৩. কনফার্মেশন</h3><p>কম ঝুঁকি: সরাসরি পাঠান। মাঝারি: SMS লিংকে কনফার্ম। বেশি: ডেলিভারি চার্জ অগ্রিম।</p></div>
+    <div class="card"><h3>৪. কুরিয়ার ও ফলাফল</h3><p>এক ক্লিকে বুকিং, স্ট্যাটাস অটো-আপডেট, প্রতিটি ফলাফলে নেটওয়ার্ক আরও স্মার্ট হয়।</p></div>
+  </div>
+
+  <h2>আপনার মাসিক ক্ষতি হিসাব করুন</h2>
+  <div class="grid">
+    <div class="card">
+      <label for="orders">মাসে COD অর্ডার</label><input id="orders" type="number" min="0" value="1000">
+      <label for="rto">ফেরত হার (%)</label><input id="rto" type="number" min="0" max="100" value="25">
+      <label for="cost">প্রতি ফেরত পার্সেলে খরচ (৳)</label><input id="cost" type="number" min="0" value="150">
+      <label for="cut">Nishchit কত % ফেরত ঠেকাতে পারে (অনুমান)</label><input id="cut" type="number" min="0" max="100" value="30">
+    </div>
+    <div class="card out" aria-live="polite">
+      <p>এখন মাসিক ক্ষতি<br><strong class="bad" id="loss">—</strong></p>
+      <p style="margin-top:12px">সম্ভাব্য সাশ্রয়<br><strong class="good" id="saved">—</strong></p>
+      <p style="margin-top:12px">উপযুক্ত প্ল্যান: <span id="plan">—</span></p>
+      <p class="note">ফেরত খরচ = ডেলিভারি চার্জ + রিটার্ন চার্জ + প্যাকেজিং + বিজ্ঞাপন খরচ। সংখ্যাগুলো আপনার নিজের হিসাব দিয়ে বদলান — এটি অনুমান, প্রতিশ্রুতি নয়।</p>
+    </div>
+  </div>
+
+  <h2>প্ল্যান</h2>
+  <div class="grid">
+    <div class="card"><h3>Free</h3><div class="price">৳০</div><ul><li>মাসে ১০০ কাস্টমার চেক</li></ul></div>
+    <div class="card"><h3>Starter</h3><div class="price">৳৯৯০<small>/মাস</small></div><ul><li>৫০০ অর্ডার/মাস</li><li>SMS কনফার্মেশন</li><li>১টি কুরিয়ার</li></ul></div>
+    <div class="card"><h3>Growth</h3><div class="price">৳২,৪৯০<small>/মাস</small></div><ul><li>২,০০০ অর্ডার/মাস</li><li>সব কুরিয়ার</li><li>WooCommerce / Shopify</li><li>নিজের ঝুঁকি-নিয়ম</li></ul></div>
+    <div class="card"><h3>Scale</h3><div class="price">৳৫,৯৯০<small>/মাস</small></div><ul><li>৬,০০০ অর্ডার/মাস</li><li>ভয়েস কল কনফার্মেশন</li><li>একাধিক ইউজার, API</li></ul></div>
+  </div>
+  <p class="note">অতিরিক্ত অর্ডার ৳১.৫/অর্ডার। বাৎসরিক পেমেন্টে ২ মাস ফ্রি। bKash, Nagad ও কার্ডে পেমেন্ট।</p>
+
+  <h2 id="contact">শুরু করুন</h2>
+  <div class="card"><p>১৪ দিনের ফ্রি পাইলট — সেটআপ আমরা করে দেব। <!-- TODO: add WhatsApp number / sign-up form --></p></div>
+</main>
+<script>
+(function () {
+  var bn = function (n) { return Math.round(n).toLocaleString('en-IN').replace(/\d/g, function (d) { return '০১২৩৪৫৬৭৮৯'[d]; }); };
+  var plans = [['Starter', 990, 500], ['Growth', 2490, 2000], ['Scale', 5990, 6000]];
+  function v(id) { var x = parseFloat(document.getElementById(id).value); return isFinite(x) && x > 0 ? x : 0; }
+  function update() {
+    var orders = v('orders'), rto = Math.min(v('rto'), 100) / 100, cost = v('cost'), cut = Math.min(v('cut'), 100) / 100;
+    var loss = orders * rto * cost, saved = loss * cut;
+    var plan = plans.find(function (p) { return orders <= p[2]; }) || plans[2];
+    var price = plan[1] + Math.max(0, orders - plan[2]) * 1.5;
+    document.getElementById('loss').textContent = '৳' + bn(loss);
+    document.getElementById('saved').textContent = '৳' + bn(saved) + '/মাস';
+    document.getElementById('plan').textContent = plan[0] + ' (৳' + bn(price) + ')' + (price > 0 && saved > 0 ? ' — খরচের ' + bn(saved / price) + ' গুণ সাশ্রয়' : '');
+  }
+  ['orders', 'rto', 'cost', 'cut'].forEach(function (id) { document.getElementById(id).addEventListener('input', update); });
+  update();
+})();
+</script>
+</body>
+</html>
