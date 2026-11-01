@@ -18,6 +18,7 @@ Vendor sources claim COD is 80–90% of Bangladeshi e-commerce and that 20–40%
 | [04 — Architecture](docs/04-architecture.md) | System design, data model, privacy, scaling path |
 | [05 — Go-to-market](docs/05-go-to-market.md) | 90-day plan, channels, funnel math |
 | [06 — Sales playbook](docs/06-sales-playbook.md) | Bangla/English scripts, demo, objections, pilot offer |
+| [07 — Deployment](docs/07-deployment.md) | Step by step to a live server: domain, VPS, HTTPS, SMS gateway, backups, SSLCommerz, updates, recovery |
 | [Roadmap](docs/ROADMAP.md) | v0.1 (this code) → v1.0 |
 
 ## How it works
@@ -81,9 +82,20 @@ DATABASE_PATH=./data/demo.db npm run dev
 | Settings `/app/settings` | Shop name, SMS language with a cost preview, bKash number and advance fee, auto-booking, risk thresholds (Growth+), courier accounts, webhook URLs, blocklist, plan usage |
 
 ```bash
-npm test          # 108 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
+npm test          # 109 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
 npm run typecheck
 npm run build && npm start
+```
+
+### Production
+
+`compose.yaml` runs the app behind **Caddy** (automatic HTTPS) with **Litestream** streaming every database change to an S3-compatible bucket. On an empty server it restores the latest backup automatically before the app starts. Follow **[docs/07-deployment.md](docs/07-deployment.md)**. In short:
+
+```bash
+cp deploy/env.production.example .env   # domain, secrets, SMS gateway, backup bucket
+docker compose up -d --build
+docker compose exec app node dist/cli/sms-test.js 01XXXXXXXXX
+docker compose exec app node dist/cli/create-seller.js --name "…" --shop "…" --plan growth --trial-days 14 --phone 01…
 ```
 
 ## API

@@ -140,7 +140,7 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
 
 | Stage | Change |
 |-------|--------|
-| Now – ~500 sellers | SQLite (WAL) on one VPS; nightly file backup (e.g. Litestream to S3-compatible storage) |
+| Now – ~500 sellers | SQLite (WAL) on one VPS via `compose.yaml`: Caddy for HTTPS, Litestream streaming to S3-compatible storage, automatic restore onto an empty server ([07-deployment](07-deployment.md)) |
 | Status sync slows down | Batch per courier, add courier webhooks, move the timer to a worker process |
 | > ~500 sellers or a second app server | Implement `Store` on Postgres (the SQL is portable); keep the same service layer |
 | Dashboard | Server-rendered pages or a Next.js app calling the same `/v1` API |
@@ -148,7 +148,7 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
 
 ## Testing
 
-`npm test` runs 108 tests:
+`npm test` runs 109 tests:
 
 - Unit tests: phone formats, the state machine, SMS segmenting, crypto, plans and config guards.
 - Risk scenarios, including that reason points sum to the score.

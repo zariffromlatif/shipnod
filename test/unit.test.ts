@@ -94,6 +94,14 @@ describe('sms copy', () => {
     expect(url.searchParams.get('msg')).toBe('হ্যাঁ & yes');
   });
 
+  it('tells the gateway when a message is Bangla', () => {
+    const p = new HttpTemplateSmsProvider({ urlTemplate: 'https://sms.example/?type={type}&u={unicode}&m={text}', apiKey: 'k', senderId: 's' });
+    const bn = new URL(p.buildUrl({ to: '01712345678', text: 'অর্ডার নিশ্চিত করুন' }));
+    expect([bn.searchParams.get('type'), bn.searchParams.get('u')]).toEqual(['unicode', '1']);
+    const en = new URL(p.buildUrl({ to: '01712345678', text: 'Confirm your order' }));
+    expect([en.searchParams.get('type'), en.searchParams.get('u')]).toEqual(['text', '0']);
+  });
+
   it('treats gateway bodies that miss the success pattern as failures', async () => {
     const p = new HttpTemplateSmsProvider({
       urlTemplate: 'https://sms.example/?m={text}',

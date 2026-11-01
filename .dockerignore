@@ -2,5 +2,9 @@ node_modules
 dist
 data
 .env
+.env.*
 .git
 coverage
+docs
+test
+*.md

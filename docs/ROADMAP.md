@@ -27,6 +27,7 @@ Each release ships only after the previous one is used by paying sellers. Dates 
 - [ ] Analytics: confirmation rate, RTO by courier and by district
 - [x] Billing: prepaid plans, invoices, SSLCommerz checkout (bKash/Nagad/cards), manual bKash/Nagad with admin approval, upgrade credit, overage billing, renewal reminders, grace → Free
 - [x] Admin console: MRR, payment review, comp/pilot plans
+- [x] Production deployment kit: Docker Compose (Caddy HTTPS + Litestream backups, automatic restore), CLIs to create sellers, test SMS and take snapshots, and a step-by-step guide
 - [ ] bKash tokenized checkout API directly (lower fees than via a gateway) once volume justifies the merchant onboarding
 - [ ] Courier webhooks where available (polling sync already exists)
 - [ ] CSV import of orders and historical outcomes

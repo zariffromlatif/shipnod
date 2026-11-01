@@ -1,12 +1,13 @@
 /**
  * Onboard a seller and print their API key (shown once) and webhook details.
  *
- *   npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --phone 01712345678
+ *   dev:        npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --trial-days 14 --phone 01712345678
+ *   production: docker compose exec app node dist/cli/create-seller.js --name "Rahim" --shop "Rahim Fashion" --plan growth --trial-days 14 --phone 01712345678
  */
 import { parseArgs } from 'node:util';
-import { isPlanId } from '../src/billing/plans.js';
-import { loadConfig } from '../src/config.js';
-import { buildService } from '../src/main.js';
+import { isPlanId } from '../billing/plans.js';
+import { loadConfig } from '../config.js';
+import { buildService } from '../main.js';
 
 const { values } = parseArgs({
   options: {
@@ -20,7 +21,7 @@ const { values } = parseArgs({
 });
 
 if (!values.name || !values.shop) {
-  console.error('Usage: npm run seller:create -- --name "Owner name" --shop "Shop name" [--plan free|starter|growth|scale] [--trial-days 14] [--phone 01...] [--lang bn|banglish|en]');
+  console.error('Usage: seller:create --name "Owner name" --shop "Shop name" [--plan free|starter|growth|scale] [--trial-days 14] [--phone 01...] [--lang bn|banglish|en]');
   process.exit(1);
 }
 if (!isPlanId(values.plan!)) {

@@ -1,4 +1,5 @@
 import { toE164 } from '../domain/phone.js';
+import { smsSegments } from './messages.js';
 
 export interface SmsMessage {
   /** Canonical local form "01XXXXXXXXX". */
@@ -33,7 +34,9 @@ export class ConsoleSmsProvider implements SmsProvider {
 
 export interface HttpTemplateSmsOptions {
   /**
-   * GET URL with placeholders: {apiKey} {senderId} {to} (8801XXXXXXXXX) {toLocal} (01XXXXXXXXX) {text}.
+   * GET URL with placeholders: {apiKey} {senderId} {to} (8801XXXXXXXXX) {toLocal} (01XXXXXXXXX) {text},
+   * plus {type} ("text" or "unicode") and {unicode} ("0" or "1") for gateways that must be told a
+   * message contains Bangla.
    * Nearly every Bangladeshi SMS gateway (BulkSMSBD, Alpha SMS, SSL Wireless, ...) exposes this shape.
    */
   urlTemplate: string;
@@ -59,8 +62,10 @@ export class HttpTemplateSmsProvider implements SmsProvider {
       to: toE164(message.to).slice(1),
       toLocal: message.to,
       text: message.text,
+      type: smsSegments(message.text).encoding === 'UCS-2' ? 'unicode' : 'text',
+      unicode: smsSegments(message.text).encoding === 'UCS-2' ? '1' : '0',
     };
-    return this.opts.urlTemplate.replace(/\{(apiKey|senderId|to|toLocal|text)\}/g, (_, key: string) =>
+    return this.opts.urlTemplate.replace(/\{(apiKey|senderId|to|toLocal|text|type|unicode)\}/g, (_, key: string) =>
       encodeURIComponent(values[key] ?? ''),
     );
   }

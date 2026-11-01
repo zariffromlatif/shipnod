@@ -1,0 +1,15 @@
+# HTTPS certificates are obtained and renewed automatically once DNS for {$DOMAIN} points at this server
+# and ports 80 and 443 are open.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy app:8787
+}
