@@ -191,11 +191,8 @@ If anything is off, see [Troubleshooting](#troubleshooting).
 ## 9. First-day checklist
 
 1. **Admin:** open `https://yourdomain.com/admin` and log in with `ADMIN_PASSWORD`.
-2. **A test shop for yourself** (no `--trial-days` means no expiry):
-   ```bash
-   docker compose exec app node dist/cli/create-seller.js --name "Your Name" --shop "Test Shop" --plan growth --phone 01YOURNUMBER
-   ```
-3. **Seller login:** open `https://yourdomain.com/app/login`, enter your number, and use the SMS code. This proves login SMS works.
+2. **A test shop for yourself:** in `/admin`, tap **+ নতুন বিক্রেতা**. Enter your own name and number, choose Growth, and clear "পাইলট (দিন)" so it never expires. Leave "লগইন লিংক SMS করুন" ticked. The welcome SMS with the login link should arrive on your phone.
+3. **Seller login:** open the link from that SMS (`https://yourdomain.com/app/login`), enter your number, and use the SMS code. This proves login SMS works.
 4. **A real order:** under **+ নতুন অর্ডার**, enter a second phone you own as the customer. Open the confirmation SMS on that phone and confirm. The order turns "কনফার্মড".
 5. **Billing without spending money:**
    1. In **বিলিং**, pick a plan.
@@ -203,11 +200,16 @@ If anything is off, see [Troubleshooting](#troubleshooting).
    3. Reject it in `/admin`.
    4. Check that the rejection SMS arrives.
 6. **Monitoring:** add an uptime check (UptimeRobot, Better Stack…) on `https://yourdomain.com/health` every 5 minutes, with alerts to your phone.
-7. **First pilot seller:**
-   ```bash
-   docker compose exec app node dist/cli/create-seller.js --name "Owner" --shop "Their Shop" --plan growth --trial-days 14 --phone 01THEIRNUMBER
-   ```
-   Send them `https://yourdomain.com/app/login`. They log in with their own phone, so they never need the API key. After 14 days the renewal SMS start, and they pay at **বিলিং**. You approve bKash/Nagad payments in `/admin`.
+7. **First pilot seller.** From your phone, even during the sales call:
+   1. In `/admin`, tap **+ নতুন বিক্রেতা**.
+   2. Enter the owner's name, the shop name and their mobile number. Keep Growth and 14 days.
+   3. Submit. They get an SMS with the login link right away. If it doesn't arrive, tap **WhatsApp-এ পাঠান** to send the same message from your WhatsApp.
+
+   They log in with their own phone and an SMS code, so they never need the API key shown on that page (it's only for connecting their own systems).
+
+   After 14 days the renewal SMS start, and they pay at **বিলিং**. You approve bKash/Nagad payments in `/admin`.
+
+   The command-line equivalent is `docker compose exec app node dist/cli/create-seller.js --name "Owner" --shop "Their Shop" --phone 01THEIRNUMBER --plan growth --trial-days 14 --welcome`.
 
 ## 10. Turn on SSLCommerz
 
@@ -232,7 +234,7 @@ The success, fail, cancel and IPN URLs are sent with every payment, so there's n
 |---|---|
 | Status | `docker compose ps` |
 | App logs | `docker compose logs --tail 100 -f app` (logs rotate at 10 MB × 5 per service) |
-| New seller | `docker compose exec app node dist/cli/create-seller.js --name … --shop … --plan growth --trial-days 14 --phone 01…` |
+| New seller | `/admin` → **+ নতুন বিক্রেতা**, or `docker compose exec app node dist/cli/create-seller.js --name … --shop … --phone 01… --plan growth --trial-days 14 --welcome` |
 | Pilot / comp / change a plan | `/admin` → বিক্রেতা → set plan |
 | Check SMS | `docker compose exec app node dist/cli/sms-test.js 01…` |
 | Local snapshot | `docker compose exec app node dist/cli/snapshot.js` → `/data/snapshots/…` |

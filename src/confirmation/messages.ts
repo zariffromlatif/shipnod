@@ -69,3 +69,16 @@ export function advancePaymentSms(args: { shopName: string; fee: number; link: s
       return finish(`${shop}: To confirm your order, please pay the Tk ${fee} delivery charge in advance: ${args.link}`);
   }
 }
+
+/** Sent when a seller is signed up: the login link, to be opened with the same number. */
+export function welcomeSms(args: { shopName: string; link: string; lang: SmsLanguage }): SmsText {
+  const shop = shortShopName(args.shopName);
+  switch (args.lang) {
+    case 'bn':
+      return finish(`${shop}-এর জন্য Shipnod চালু হয়েছে! এই নম্বর দিয়ে লগইন করুন: ${args.link}`);
+    case 'banglish':
+      return finish(`${shop} er jonno Shipnod chalu hoyeche! Ei number diye login korun: ${args.link}`);
+    case 'en':
+      return finish(`Shipnod is ready for ${shop}! Log in with this number: ${args.link}`);
+  }
+}

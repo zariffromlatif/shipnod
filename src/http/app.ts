@@ -10,6 +10,7 @@ import { AppError } from '../lib/errors.js';
 import type { BillingRepo } from '../db/billing-repo.js';
 import type { AuthService } from '../services/auth.js';
 import type { BillingService } from '../services/billing.js';
+import type { OnboardingService } from '../services/onboarding.js';
 import { createAdmin } from './admin.js';
 import type { ShipnodService } from '../services/shipnod.js';
 import { createDashboard } from './dashboard/routes.js';
@@ -103,6 +104,7 @@ export interface AppDeps {
   auth: AuthService;
   billing: BillingService;
   billingRepo: BillingRepo;
+  onboarding: OnboardingService;
 }
 
 export interface AppOptions {
@@ -320,7 +322,13 @@ export function createApp(deps: AppDeps, opts: AppOptions): Hono<Env> {
   app.route('/v1', api);
   app.route('/app', createDashboard(service, auth, billing, opts));
   if (opts.adminPassword) {
-    app.route('/admin', createAdmin(billing, deps.billingRepo, { password: opts.adminPassword, secureCookies: opts.secureCookies, now: opts.now }));
+    app.route(
+      '/admin',
+      createAdmin(
+        { billing, repo: deps.billingRepo, onboarding: deps.onboarding },
+        { password: opts.adminPassword, secureCookies: opts.secureCookies, now: opts.now },
+      ),
+    );
   }
   return app;
 }

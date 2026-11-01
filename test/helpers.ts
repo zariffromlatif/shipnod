@@ -1,3 +1,4 @@
+import type { Hono } from 'hono';
 import { SslCommerzClient } from '../src/billing/sslcommerz.js';
 import { ConsoleSmsProvider } from '../src/confirmation/sms.js';
 import { BillingRepo } from '../src/db/billing-repo.js';
@@ -6,6 +7,7 @@ import { createApp } from '../src/http/app.js';
 import { SecretBox } from '../src/lib/crypto.js';
 import { AuthService } from '../src/services/auth.js';
 import { BillingService } from '../src/services/billing.js';
+import { OnboardingService } from '../src/services/onboarding.js';
 import { ShipnodService } from '../src/services/shipnod.js';
 
 export const ADMIN_PASSWORD = 'correct-horse-battery-staple';
@@ -81,8 +83,9 @@ export function createHarness(opts: HarnessOptions = {}) {
     manual: opts.manual === false ? { bkash: null, nagad: null } : { bkash: '01900000001', nagad: '01600000001' },
     now,
   });
+  const onboarding = new OnboardingService({ service, billing, sms, publicBaseUrl: 'https://nsc.test' });
   const app = createApp(
-    { service, auth, billing, billingRepo },
+    { service, auth, billing, billingRepo, onboarding },
     { publicBaseUrl: 'https://nsc.test', secureCookies: false, adminPassword: opts.admin === false ? null : ADMIN_PASSWORD, now },
   );
 
@@ -99,5 +102,36 @@ export function createHarness(opts: HarnessOptions = {}) {
     ...extra,
   });
 
-  return { store, sms, service, auth, billing, billingRepo, app, clock, courier, gateway, validPayment };
+  return { store, sms, service, auth, billing, billingRepo, onboarding, app, clock, courier, gateway, validPayment };
+}
+
+/** Cookie-keeping client; picks up the CSRF token from the last HTML page. */
+export function client(app: Hono<any>) {
+  const jar = new Map<string, string>();
+  let csrf = '';
+  const request = async (method: string, path: string, form?: Record<string, string>) => {
+    const headers: Record<string, string> = {};
+    if (jar.size) headers.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+    let body: string | undefined;
+    if (form) {
+      headers['content-type'] = 'application/x-www-form-urlencoded';
+      body = new URLSearchParams(form).toString();
+    }
+    const res = await app.request(path, { method, headers, body });
+    for (const c of res.headers.getSetCookie()) {
+      const [pair] = c.split(';');
+      const [k, v] = pair!.split('=');
+      if (v) jar.set(k!, v);
+      else jar.delete(k!);
+    }
+    const text = await res.text();
+    const token = text.match(/name="_csrf" value="([0-9a-f]{32})"/);
+    if (token) csrf = token[1]!;
+    return { status: res.status, location: res.headers.get('location'), text };
+  };
+  return {
+    get: (path: string) => request('GET', path),
+    post: (path: string, form: Record<string, string> = {}) => request('POST', path, { _csrf: csrf, ...form }),
+    rawPost: (path: string, form: Record<string, string>) => request('POST', path, form),
+  };
 }

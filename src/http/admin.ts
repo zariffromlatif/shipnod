@@ -7,7 +7,10 @@ import { PLAN_IDS, planOf } from '../billing/plans.js';
 import type { BillingRepo } from '../db/billing-repo.js';
 import { AppError } from '../lib/errors.js';
 import { sha256Hex } from '../lib/crypto.js';
+import { subscriptionState } from '../billing/subscription.js';
+import { toE164 } from '../domain/phone.js';
 import type { BillingService } from '../services/billing.js';
+import type { OnboardingService, OnboardResult } from '../services/onboarding.js';
 import { csrfField, dateTime, flash, num, shell, taka, type Html } from './dashboard/ui.js';
 
 /**
@@ -40,7 +43,10 @@ function adminPage(title: string, csrf: string | null, body: Html): Html {
     title,
     html`<header class="top"><div class="top-in">
         <a class="brand" href="/admin">Shipnod<small>অ্যাডমিন</small></a>
-        ${csrf ? html`<form class="inline" method="post" action="/admin/logout">${csrfField(csrf)}<button type="submit">লগআউট</button></form>` : ''}
+        ${csrf
+          ? html`<nav aria-label="অ্যাডমিন মেনু"><a href="/admin">ওভারভিউ</a><a href="/admin/sellers/new">+ নতুন বিক্রেতা</a></nav>
+              <form class="inline" method="post" action="/admin/logout">${csrfField(csrf)}<button type="submit">লগআউট</button></form>`
+          : ''}
       </div></header>
       <main>${body}</main>`,
   );
@@ -59,7 +65,106 @@ function loginView(error?: string): Html {
   );
 }
 
-export function createAdmin(billing: BillingService, repo: BillingRepo, opts: AdminOptions): Hono<AdminEnv> {
+export interface AdminDeps {
+  billing: BillingService;
+  repo: BillingRepo;
+  onboarding: OnboardingService;
+}
+
+export interface NewSellerValues {
+  name?: string;
+  shopName?: string;
+  phone?: string;
+  plan?: string;
+  trialDays?: string;
+  smsLang?: string;
+  sendWelcome?: boolean;
+}
+
+const LONG_DATE = new Intl.DateTimeFormat('bn-BD', { timeZone: 'Asia/Dhaka', day: 'numeric', month: 'long', year: 'numeric' });
+
+function newSellerView(csrf: string, v: NewSellerValues = {}, error?: string): Html {
+  const plan = v.plan ?? 'growth';
+  const lang = v.smsLang ?? 'bn';
+  const welcome = v.sendWelcome ?? true;
+  return adminPage(
+    'নতুন বিক্রেতা',
+    csrf,
+    html`<h1>নতুন বিক্রেতা</h1>
+      <p class="muted">বিক্রেতা এই মোবাইল নম্বর দিয়ে SMS কোডে লগইন করবেন — পাসওয়ার্ড লাগবে না।</p>
+      ${flash('error', error)}
+      <form class="card" method="post" action="/admin/sellers">
+        ${csrfField(csrf)}
+        <div class="fields">
+          <div><label for="name">মালিকের নাম</label><input id="name" name="name" required maxlength="80" value="${v.name ?? ''}" autocomplete="off"></div>
+          <div><label for="shopName">দোকানের নাম (SMS-এ দেখাবে)</label><input id="shopName" name="shopName" required maxlength="60" value="${v.shopName ?? ''}" autocomplete="off"></div>
+          <div><label for="phone">মোবাইল নম্বর</label><input id="phone" name="phone" type="tel" inputmode="tel" required value="${v.phone ?? ''}" placeholder="01XXXXXXXXX" autocomplete="off"></div>
+        </div>
+        <div class="fields">
+          <div><label for="plan">প্ল্যান</label>
+            <select id="plan" name="plan">${PLAN_IDS.map((p) => html`<option value="${p}" ${p === plan ? raw('selected') : ''}>${planOf(p).name}${planOf(p).priceBdt ? ` · ৳${num(planOf(p).priceBdt)}/মাস` : ''}</option>`)}</select></div>
+          <div><label for="trialDays">পাইলট (দিন)</label><input id="trialDays" name="trialDays" inputmode="numeric" value="${v.trialDays ?? '14'}">
+            <p class="muted small">খালি রাখলে মেয়াদ থাকবে না। মেয়াদ শেষে বিক্রেতা রিনিউ SMS পাবেন।</p></div>
+          <div><label for="smsLang">কাস্টমারকে SMS-এর ভাষা</label>
+            <select id="smsLang" name="smsLang">${[['bn', 'বাংলা'], ['banglish', 'Banglish'], ['en', 'English']].map(([id, label]) => html`<option value="${id}" ${id === lang ? raw('selected') : ''}>${label}</option>`)}</select></div>
+        </div>
+        <label class="check"><input type="checkbox" name="sendWelcome" value="1" ${welcome ? raw('checked') : ''}>এখনই বিক্রেতাকে লগইন লিংক SMS করুন</label>
+        <button class="primary" type="submit">বিক্রেতা যোগ করুন</button>
+      </form>`,
+  );
+}
+
+function createdView(csrf: string, r: OnboardResult, now: Date): Html {
+  const s = r.seller;
+  const state = subscriptionState(s, now);
+  const planLine =
+    state.status === 'free'
+      ? 'Free (শুধু কাস্টমার চেক)'
+      : state.paidUntil
+        ? `${planOf(s.plan).name} · পাইলট ${LONG_DATE.format(state.paidUntil)} পর্যন্ত`
+        : `${planOf(s.plan).name} · মেয়াদ নেই`;
+  const wa = `https://wa.me/${toE164(s.phone!).slice(1)}?text=${encodeURIComponent(r.welcome.text)}`;
+  const copyable = (id: string, value: string) =>
+    html`<input id="${id}" readonly value="${value}" onfocus="this.select()" style="font-family:ui-monospace,monospace">`;
+  return adminPage(
+    'বিক্রেতা যোগ হয়েছে',
+    csrf,
+    html`<h1>${s.shopName}</h1>
+      ${flash('ok', 'বিক্রেতা যোগ হয়েছে।')}
+      ${r.welcome.sent ? flash('ok', `লগইন লিংক ${s.phone} নম্বরে SMS করা হয়েছে।`) : ''}
+      ${r.welcome.error ? flash('error', `SMS যায়নি: ${r.welcome.error} — নিচের WhatsApp বা লিংক দিয়ে পাঠান।`) : ''}
+      <div class="card">
+        <dl class="kv">
+          <dt>মালিক</dt><dd>${s.name}</dd>
+          <dt>মোবাইল</dt><dd>${s.phone}</dd>
+          <dt>প্ল্যান</dt><dd>${planLine}</dd>
+          <dt>আইডি</dt><dd><code>${s.id}</code></dd>
+        </dl>
+      </div>
+      <div class="card">
+        <h2>বিক্রেতাকে পাঠান</h2>
+        <label for="login">লগইন লিংক (এই নম্বর দিয়ে লগইন করবেন)</label>${copyable('login', r.loginUrl)}
+        <div class="actions"><a class="btn primary" href="${wa}" target="_blank" rel="noopener">WhatsApp-এ পাঠান</a></div>
+      </div>
+      <div class="card">
+        <h2>API key</h2>
+        <p class="small"><strong>শুধু এখনই দেখা যাবে।</strong> নিজের সিস্টেম বা API দিয়ে অর্ডার পাঠাতে চাইলেই লাগবে — ড্যাশবোর্ড ব্যবহারে লাগে না। WooCommerce/Shopify-এর ওয়েবহুক তথ্য বিক্রেতার সেটিংস পাতায় আছে।</p>
+        ${copyable('apikey', r.apiKey)}
+      </div>
+      <div class="actions"><a class="btn primary" href="/admin/sellers/new">+ আরেকজন যোগ করুন</a><a class="btn" href="/admin">ওভারভিউ</a></div>`,
+  );
+}
+
+const ONBOARD_ERRORS: Record<string, string> = {
+  invalid_name: 'মালিকের নাম দিন (৮০ অক্ষরের মধ্যে)।',
+  invalid_shop: 'দোকানের নাম দিন (৬০ অক্ষরের মধ্যে)।',
+  invalid_phone: 'সঠিক বাংলাদেশি মোবাইল নম্বর দিন।',
+  phone_taken: 'এই নম্বরে আগেই একজন বিক্রেতা আছে। ওভারভিউ-এর বিক্রেতা তালিকায় দেখুন।',
+  invalid_days: 'পাইলটের দিন ১ থেকে ৩৬৫-এর মধ্যে দিন, অথবা খালি রাখুন।',
+};
+
+export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv> {
+  const { billing, repo, onboarding } = deps;
   const app = new Hono<AdminEnv>();
   const now = opts.now ?? (() => new Date());
   const expected = Buffer.from(sha256Hex(`admin:${opts.password}`), 'hex');
@@ -199,6 +304,43 @@ export function createAdmin(billing: BillingService, repo: BillingRepo, opts: Ad
       return overview(c, { error: 'Unknown action', status: 422 });
     } catch (err) {
       if (err instanceof AppError) return overview(c, { error: err.message, status: 422 });
+      throw err;
+    }
+  });
+
+  app.get('/sellers/new', (c) => c.html(newSellerView(c.get('csrf'))));
+
+  app.post('/sellers', async (c) => {
+    const form = await c.req.parseBody();
+    const str = (k: string) => (typeof form[k] === 'string' ? (form[k] as string).trim() : '');
+    const values: NewSellerValues = {
+      name: str('name'),
+      shopName: str('shopName'),
+      phone: str('phone'),
+      plan: str('plan'),
+      trialDays: str('trialDays'),
+      smsLang: str('smsLang'),
+      sendWelcome: form.sendWelcome === '1',
+    };
+    const plan = z.enum(PLAN_IDS).safeParse(values.plan);
+    const lang = z.enum(['bn', 'banglish', 'en']).safeParse(values.smsLang);
+    const days = values.trialDays === '' ? null : Number(values.trialDays);
+    if (!plan.success || !lang.success) return c.html(newSellerView(c.get('csrf'), values, 'প্ল্যান আর ভাষা বেছে নিন।'), 422);
+    try {
+      const result = await onboarding.onboard({
+        name: values.name!,
+        shopName: values.shopName!,
+        phone: values.phone!,
+        plan: plan.data,
+        trialDays: plan.data === 'free' ? null : days,
+        smsLang: lang.data,
+        sendWelcome: values.sendWelcome!,
+      });
+      // The page carries a one-time API key: keep it out of caches and browser history.
+      c.header('Cache-Control', 'no-store');
+      return c.html(createdView(c.get('csrf'), result, now()));
+    } catch (err) {
+      if (err instanceof AppError) return c.html(newSellerView(c.get('csrf'), values, ONBOARD_ERRORS[err.code] ?? err.message), 422);
       throw err;
     }
   });

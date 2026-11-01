@@ -88,6 +88,11 @@ export class ShipnodService {
     return this.store.getSeller(id);
   }
 
+  findSellerByPhone(phone: string): Seller | null {
+    const normalized = normalizeBdPhone(phone);
+    return normalized ? this.store.getSellerByPhone(normalized) : null;
+  }
+
   updateSettings(seller: Seller, patch: SellerPatch): Seller {
     if (patch.riskPolicy && !this.planFor(seller).customRiskRules) {
       throw new AppError(402, 'plan_required', 'Custom risk rules need the Growth plan or above');

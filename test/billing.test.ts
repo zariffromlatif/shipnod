@@ -1,45 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PlanId } from '../src/billing/plans.js';
 import { billingPeriod } from '../src/billing/plans.js';
-import type { Hono } from 'hono';
-import { ADMIN_PASSWORD, createHarness, type HarnessOptions } from './helpers.js';
+import { ADMIN_PASSWORD, client, createHarness, type HarnessOptions } from './helpers.js';
 
 const DAY = 86_400_000;
 let h: ReturnType<typeof createHarness>;
 beforeEach(() => {
   h = createHarness();
 });
-
-/** Cookie-keeping client; picks up the CSRF token from the last HTML page. */
-function client(app: Hono<any>) {
-  const jar = new Map<string, string>();
-  let csrf = '';
-  const request = async (method: string, path: string, form?: Record<string, string>) => {
-    const headers: Record<string, string> = {};
-    if (jar.size) headers.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
-    let body: string | undefined;
-    if (form) {
-      headers['content-type'] = 'application/x-www-form-urlencoded';
-      body = new URLSearchParams(form).toString();
-    }
-    const res = await app.request(path, { method, headers, body });
-    for (const c of res.headers.getSetCookie()) {
-      const [pair] = c.split(';');
-      const [k, v] = pair!.split('=');
-      if (v) jar.set(k!, v);
-      else jar.delete(k!);
-    }
-    const text = await res.text();
-    const token = text.match(/name="_csrf" value="([0-9a-f]{32})"/);
-    if (token) csrf = token[1]!;
-    return { status: res.status, location: res.headers.get('location'), text };
-  };
-  return {
-    get: (path: string) => request('GET', path),
-    post: (path: string, form: Record<string, string> = {}) => request('POST', path, { _csrf: csrf, ...form }),
-    rawPost: (path: string, form: Record<string, string>) => request('POST', path, form),
-  };
-}
 
 async function sellerSession(plan: PlanId = 'free', phone = '01711111111', shopName = 'Rahim Fashion') {
   const { seller, apiKey } = h.service.createSeller({ name: 'Rahim', shopName, plan, phone });

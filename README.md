@@ -47,7 +47,7 @@ Requires Node.js ≥ 22.13 (uses the built-in `node:sqlite`; there are no native
 ```bash
 npm install
 cp .env.example .env            # dev defaults work as-is
-npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --plan growth --trial-days 14 --phone 01712345678
+npm run seller:create -- --name "Rahim" --shop "Rahim Fashion" --phone 01712345678 --plan growth --trial-days 14
 npm run dev                     # http://localhost:8787
 ```
 
@@ -82,7 +82,7 @@ DATABASE_PATH=./data/demo.db npm run dev
 | Settings `/app/settings` | Shop name, SMS language with a cost preview, bKash number and advance fee, auto-booking, risk thresholds (Growth+), courier accounts, webhook URLs, blocklist, plan usage |
 
 ```bash
-npm test          # 109 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
+npm test          # 115 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
 npm run typecheck
 npm run build && npm start
 ```
@@ -95,7 +95,7 @@ npm run build && npm start
 cp deploy/env.production.example .env   # domain, secrets, SMS gateway, backup bucket
 docker compose up -d --build
 docker compose exec app node dist/cli/sms-test.js 01XXXXXXXXX
-docker compose exec app node dist/cli/create-seller.js --name "…" --shop "…" --plan growth --trial-days 14 --phone 01…
+docker compose exec app node dist/cli/create-seller.js --name "…" --shop "…" --phone 01… --plan growth --trial-days 14 --welcome   # or /admin → + নতুন বিক্রেতা
 ```
 
 ## API
@@ -139,8 +139,12 @@ Sellers buy prepaid periods at **`/app/billing`**: monthly is 30 days, annual is
 - **Upgrades:** unused days of the current plan are deducted from the new invoice. Downgrades turn the unused value into account credit.
 - **Overage:** each extra order is recorded at the moment it happens, against the plan active then, and billed once on the next invoice.
 - **Invoices:** one open invoice per seller, valid for 24 hours, numbered `SN-YYYY-NNNNN`. Paid invoices double as receipts.
-- **Admin console (`/admin`, enabled by `ADMIN_PASSWORD`):** MRR, revenue, payments waiting for review (approve/reject, and the seller gets an SMS), every seller's plan status, and "set plan" for pilots and comps.
-- **Pilots:** `npm run seller:create -- … --plan growth --trial-days 14`, or "set plan" in `/admin`.
+- **Admin console (`/admin`, enabled by `ADMIN_PASSWORD`):**
+  - **+ নতুন বিক্রেতা:** sign up a seller from your phone. Enter name, shop and mobile number, choose a plan and pilot length (Growth, 14 days by default), and they get an SMS with the login link. A WhatsApp button sends the same message if SMS fails.
+  - MRR and revenue.
+  - Payments waiting for review: approve or reject, and the seller gets an SMS.
+  - Every seller's plan status, with "set plan" for comps and extensions.
+- **Pilots:** the admin form, or `npm run seller:create -- --name … --shop … --phone 01… --plan growth --trial-days 14 --welcome`.
 - **Configuration:** `SSLCOMMERZ_*`, `BILLING_BKASH_NUMBER`, `BILLING_NAGAD_NUMBER` and `ADMIN_PASSWORD` in `.env.example`. Leave a payment method unset to hide it.
 
 ## Before going live

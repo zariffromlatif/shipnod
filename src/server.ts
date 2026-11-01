@@ -4,9 +4,9 @@ import { createApp } from './http/app.js';
 import { buildService } from './main.js';
 
 const config = loadConfig();
-const { store, service, auth, billing, billingRepo } = buildService(config);
+const { store, service, auth, billing, billingRepo, onboarding } = buildService(config);
 const app = createApp(
-  { service, auth, billing, billingRepo },
+  { service, auth, billing, billingRepo, onboarding },
   {
     publicBaseUrl: config.publicBaseUrl,
     secureCookies: config.nodeEnv === 'production',
