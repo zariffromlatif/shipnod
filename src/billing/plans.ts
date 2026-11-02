@@ -20,7 +20,9 @@ export interface Plan {
   storeIntegrations: boolean;
   /** Seller-defined risk thresholds and advance-payment rules. */
   customRiskRules: boolean;
+  /** Entitlement for the planned IVR confirmation (roadmap v0.3) — not built yet, gates nothing. */
   voiceConfirmation: boolean;
+  /** Entitlement for planned multi-user accounts (roadmap v0.4) — not built yet, gates nothing. */
   multiUser: boolean;
 }
 

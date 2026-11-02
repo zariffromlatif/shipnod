@@ -122,7 +122,7 @@ All `/v1` routes need `Authorization: Bearer <api key>`.
 
 | Free | Starter | Growth | Scale |
 |------|---------|--------|-------|
-| ৳0 · 100 customer checks | ৳990 · 500 orders · 1 courier | ৳2,490 · 2,000 orders · all couriers · Woo/Shopify · custom rules | ৳5,990 · 6,000 orders · voice confirm · multi-user |
+| ৳0 · 100 customer checks | ৳990 · 500 orders · 1 courier | ৳2,490 · 2,000 orders · all couriers · Woo/Shopify · custom rules | ৳5,990 · 6,000 orders · everything in Growth · cheaper than Growth + overage above ~4,300 orders. Voice confirmation and multi-user are planned, not built yet |
 
 Overage costs ৳1.5 per order. Annual plans get 2 months free. Paid onboarding (৳3,000–5,000) brings in cash from week one. Limits are enforced in [`src/billing/plans.ts`](src/billing/plans.ts).
 

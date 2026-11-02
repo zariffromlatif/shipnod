@@ -42,6 +42,8 @@ describe('billing page', () => {
     expect(page.text).toContain('Free</strong> প্ল্যানে আছেন');
     expect(page.text).toContain('৳২,৪৯০');
     expect((await b.get('/app/billing?cycle=annual')).text).toContain('৳২৪,৯০০');
+    expect(page.text).toContain('শিগগিরই আসছে: ভয়েস কনফার্মেশন, একাধিক ইউজার');
+    expect(page.text).not.toContain('ভয়েস কনফার্মেশন*');
 
     const { path } = await buy(b, 'growth');
     const invoice = await b.get(path);

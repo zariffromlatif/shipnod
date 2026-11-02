@@ -42,6 +42,9 @@ describe('landing page', () => {
     expect(page).toContain('name="couriers" value="redx"');
     expect(page).toContain('https://wa.me/8801888888888?text=');
     expect(page).not.toContain('TODO');
+    // Planned Scale features are labelled as coming, not sold as included.
+    expect(page).not.toContain('<li>ভয়েস কল কনফার্মেশন</li>');
+    expect(page).toContain('শিগগিরই আসছে: ভয়েস কল কনফার্মেশন, একাধিক ইউজার');
 
     h = createHarness({ whatsapp: false });
     const without = await (await h.app.request('/')).text();

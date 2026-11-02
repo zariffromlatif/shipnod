@@ -62,9 +62,10 @@ All prices in BDT per month. These must match the plan limits in code.
 | Free | 0 | 100 risk checks/month, no automated orders | Small sellers, trial, lead generation |
 | Starter | 990 | 500 orders/month, 1 courier | Facebook-page sellers |
 | Growth | 2,490 | 2,000 orders/month, all couriers, WooCommerce/Shopify, custom risk rules | Growing stores |
-| Scale | 5,990 | 6,000 orders/month, voice-call confirmation, multi-user, API | Larger operations |
+| Scale | 5,990 | 6,000 orders/month and everything in Growth. *Planned, not built yet:* voice-call confirmation, multi-user | Larger operations |
 
 - **Overage:** 1.5 BDT per order above the plan quota.
+- **Selling Scale today:** until voice confirmation and multi-user ship (roadmap v0.3/v0.4), Scale is a volume plan. Above about 4,300 orders a month it costs less than Growth plus overage (2,490 + 1.5 × (orders − 2,000)). Sell it on that, never on the planned features.
 - **Annual prepay:** 2 months free (pay for 10, get 12).
 - **One-time paid onboarding / setup:** 3,000–5,000 BDT for courier and store integration, historical order import and template setup. This is the services revenue bridge: it brings in cash in the first weeks and funds founder time. The first 10 pilot sellers can have it waived in exchange for a case study.
 - **Payment methods:** bKash and Nagad, plus SSLCommerz for cards and bank transfer. Monthly invoice with a payment link; automatic renewal where the payment provider supports it.
