@@ -1,6 +1,6 @@
 # 06 — Sales playbook
 
-Use these scripts as starting points; adjust tone to the seller. Placeholders are in `{braces}`. Never send more than one follow-up to someone who has not replied.
+Use these scripts as starting points; adjust tone to the seller. For launch posts, comment replies and the full pilot DM sequence, see [08 — Launch kit](08-launch-kit.md). Placeholders are in `{braces}`. Never send more than one follow-up to someone who has not replied.
 
 ## Who to contact
 
@@ -59,7 +59,7 @@ Only state "sellers we spoke with estimate 120–250 taka" after the week-1 inte
 |------|------|------------|
 | 0:00–3:00 | **Discovery** | Ask the discovery questions below. Write down their numbers. |
 | 3:00–5:00 | **Cost of returns** | Calculate their monthly loss with their numbers: orders × RTO % × cost per return. Say the number out loud and let it sit. |
-| 5:00–11:00 | **Live demo** | (1) Check the phone number of a customer who recently returned a parcel to them: show the score and reasons. (2) Create a test order with their own phone number: they receive the confirmation SMS and tap confirm. (3) Show one-click courier booking. (4) Show the dashboard's RTO and "money saved" view. |
+| 5:00–11:00 | **Live demo** | On your test shop: (1) create an order with their own phone number; they receive the confirmation SMS and tap confirm. (2) Create one with an incomplete address (just "Mirpur") and then a second order from the same number, and show the reasons it gives. (3) Show one-click courier booking. (4) Show the dashboard's RTO and "money saved" view. While the shared delivery record is still small, don't demo a repeat-returner lookup unless that number really has history. Never load demo data into the live server. |
 | 11:00–13:00 | **Pilot offer** | 14-day free pilot, measured against their own baseline; first paid month is money-back if returns don't drop. Recommend a plan based on their order volume. |
 | 13:00–15:00 | **Next steps** | Book a 30-minute setup slot within 48 hours. List what they need to bring (courier API credentials, store access, recent order outcomes). |
 
@@ -101,7 +101,7 @@ Only state "sellers we spoke with estimate 120–250 taka" after the week-1 inte
 - [ ] Baseline RTO agreed and recorded
 - [ ] Courier credentials connected (Steadfast API key + secret, Pathao client credentials, RedX access token); test booking done
 - [ ] Store connected (WooCommerce/Shopify webhook) or API/manual flow explained
-- [ ] Last 90 days of order outcomes imported (if available)
+- [ ] Baseline noted from the courier panel: returns in the last 30 days (importing past orders isn't built yet)
 - [ ] Message template language chosen (Bangla / Banglish / English); shop name set
 - [ ] Cost per failed order set for "money saved" (default 150 BDT)
 - [ ] Risk thresholds reviewed (defaults: <30 ship, 30–59 confirm, 60–79 advance, ≥80 hold)

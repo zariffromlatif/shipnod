@@ -19,6 +19,7 @@ Vendor sources claim COD is 80–90% of Bangladeshi e-commerce and that 20–40%
 | [05 — Go-to-market](docs/05-go-to-market.md) | 90-day plan, channels, funnel math |
 | [06 — Sales playbook](docs/06-sales-playbook.md) | Bangla/English scripts, demo, objections, pilot offer |
 | [07 — Deployment](docs/07-deployment.md) | Step by step to a live server: domain, VPS, HTTPS, SMS gateway, backups, SSLCommerz, updates, recovery |
+| [08 — Launch kit](docs/08-launch-kit.md) | Ready-to-paste Bangla Facebook posts, comment replies, `?ref=` links and the DM sequence from first comment to first payment |
 | [Roadmap](docs/ROADMAP.md) | v0.1 (this code) → v1.0 |
 
 ## How it works
