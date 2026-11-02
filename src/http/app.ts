@@ -10,7 +10,9 @@ import { AppError } from '../lib/errors.js';
 import type { BillingRepo } from '../db/billing-repo.js';
 import type { AuthService } from '../services/auth.js';
 import type { BillingService } from '../services/billing.js';
+import type { LeadService } from '../services/leads.js';
 import type { OnboardingService } from '../services/onboarding.js';
+import { registerPilotRoutes, supportWhatsappUrl } from './pilot.js';
 import { createAdmin } from './admin.js';
 import type { ShipnodService } from '../services/shipnod.js';
 import { createDashboard } from './dashboard/routes.js';
@@ -105,6 +107,7 @@ export interface AppDeps {
   billing: BillingService;
   billingRepo: BillingRepo;
   onboarding: OnboardingService;
+  leads: LeadService;
 }
 
 export interface AppOptions {
@@ -113,13 +116,19 @@ export interface AppOptions {
   secureCookies: boolean;
   /** Enables /admin when set. */
   adminPassword?: string | null;
+  /** Number behind the landing page's WhatsApp button; null hides it. */
+  supportWhatsapp?: string | null;
   now?: () => Date;
 }
 
 export function createApp(deps: AppDeps, opts: AppOptions): Hono<Env> {
   const { service, auth, billing } = deps;
   const app = new Hono<Env>();
-  const landing = loadLanding();
+  const whatsapp = supportWhatsappUrl(opts.supportWhatsapp ?? null);
+  const landing = loadLanding().replace(
+    '<!--WHATSAPP-->',
+    whatsapp ? `<a class="cta wa" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp-এ কথা বলুন</a>` : '',
+  );
 
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: { code: err.code, message: err.message } }, err.status);
@@ -133,6 +142,7 @@ export function createApp(deps: AppDeps, opts: AppOptions): Hono<Env> {
 
   app.get('/health', (c) => c.json({ ok: true }));
   app.get('/', (c) => c.html(landing));
+  registerPilotRoutes(app, deps.leads, opts.supportWhatsapp ?? null);
 
   // ------------------------------------------------ customer confirmation link
 
@@ -325,7 +335,7 @@ export function createApp(deps: AppDeps, opts: AppOptions): Hono<Env> {
     app.route(
       '/admin',
       createAdmin(
-        { billing, repo: deps.billingRepo, onboarding: deps.onboarding },
+        { billing, repo: deps.billingRepo, onboarding: deps.onboarding, leads: deps.leads },
         { password: opts.adminPassword, secureCookies: opts.secureCookies, now: opts.now },
       ),
     );

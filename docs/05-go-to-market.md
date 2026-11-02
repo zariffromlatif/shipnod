@@ -27,6 +27,8 @@ Sell before scaling. The first customers come from **founder-led sales**: direct
 | Pilots started | 10 | 40% of demos |
 | Paying after pilot | 6 | 60% of pilots |
 
+Track this in Shipnod itself. Post the landing page with a different `?ref=` per group or campaign (e.g. `?ref=fb-we-group`, `?ref=yt-demo`). Every pilot request shows its ref in `/admin` → লিড, so you can see which channel brings sellers who actually convert.
+
 That is **about 2% from DM to paying seller**. Reaching the month-3 target of 40–60 paying sellers from DMs alone would take roughly 2,000–3,000 DMs (about 250 per week, ~35 per day). That is possible solo but heavy, which is why groups, the free checker, partners and referrals must start contributing from week 7. Replace every rate above with real numbers after the first 100 DMs.
 
 ## Week-by-week plan

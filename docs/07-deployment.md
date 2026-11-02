@@ -188,6 +188,10 @@ docker compose exec app node dist/cli/sms-test.js 01XXXXXXXXX     # your own pho
 
 If anything is off, see [Troubleshooting](#troubleshooting).
 
+**Pilot requests:** set `LEAD_ALERT_PHONE` (your number) and `SUPPORT_WHATSAPP` in `.env` before you start posting. When a seller fills in the form on your landing page, you get an SMS and the request appears in `/admin` → **লিড**.
+
+Add `?ref=` to the link in each post so you can see which groups bring sellers, e.g. `https://yourdomain.com/?ref=fb-we-group`. The ref shows on each request.
+
 ## 9. First-day checklist
 
 1. **Admin:** open `https://yourdomain.com/admin` and log in with `ADMIN_PASSWORD`.

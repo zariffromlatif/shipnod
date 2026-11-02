@@ -44,6 +44,7 @@ The dashboard is server-rendered by the same process, with no client-side framew
 - **Flow:** quote → invoice (one open per seller, 24 h) → payment → `settle()`. Settling runs in one transaction. It activates the plan, stacks a same-plan renewal onto the current end date, moves credit, and marks overage periods billed. A second payment for an already-paid invoice becomes account credit. Money is never lost.
 - **SSLCommerz:** callbacks are untrusted input. The browser return and the IPN both lead to the server-to-server validation API, and amount, currency and `tran_id` must match. Everything after that network call is synchronous, so a redirect and an IPN for the same payment can't both activate the plan. `risk_level = 1` goes to manual review.
 - **Manual bKash/Nagad:** the seller submits the TrxID and payer number. You approve or reject it in `/admin`, and the seller gets an SMS either way. TrxIDs are unique among non-rejected payments, so a rejected one can be retried but none can be reused.
+- **Pilot requests:** `LeadService` stores landing-page requests in `leads`, keeping the visitor's `?ref=` / `utm_source`. It applies the spam guards: a hidden trap field (a fake success, nothing stored), repeat requests from the same phone within 24 hours merged, existing sellers sent to login, and junk values dropped. It texts the founder, capped at 20 a day. `/admin/leads` is where follow-up happens. Converting a lead goes through the normal onboarding and marks the lead converted with the new seller's id.
 - **Onboarding:** `OnboardingService` is the single path for signing up a seller, used by both the admin form and the `create-seller` command. It validates the input, refuses a phone that's already registered, creates the account, starts the pilot and sends the welcome SMS. A failed SMS doesn't undo the sign-up. The one-time API key is shown on a `Cache-Control: no-store` page and never put in a URL.
 - **Admin:** `/admin` is enabled only when `ADMIN_PASSWORD` is set. Login takes a constant-time password check, locks for 15 minutes after 5 failures, and uses a hashed session token in a `SameSite=Strict` cookie scoped to `/admin`, with CSRF tokens on every form.
 - **Reminders:** an hourly job sends SMS at 5 days and 1 day before expiry, at the start of grace, and when the account drops to Free. Each one is sent at most once per paid period.
@@ -149,7 +150,7 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
 
 ## Testing
 
-`npm test` runs 115 tests:
+`npm test` runs 126 tests:
 
 - Unit tests: phone formats, the state machine, SMS segmenting, crypto, plans and config guards.
 - Risk scenarios, including that reason points sum to the score.
@@ -167,4 +168,5 @@ Only Steadfast is auto-booked, because Pathao and RedX need per-order area ids. 
   - plan changes: upgrade credit, downgrade into credit, stacked renewals, overage recorded live and billed once;
   - lifecycle: grace and expiry, each reminder sent once;
   - admin: lockout, CSRF, disabled without a password.
+- Pilot requests: the landing form and the WhatsApp button, storing and alerting, validation that keeps what was typed, the hidden trap field, merged repeats, existing sellers, the daily alert cap, junk values, the admin list and status changes, and conversion with a pre-filled form.
 - Admin sign-up: admin-only with CSRF, the welcome SMS text and language, the API key working and not cached, the WhatsApp link never carrying the key, the new seller logging in immediately, duplicate phones, validation, comped and Free accounts, and a failed SMS not losing the seller.

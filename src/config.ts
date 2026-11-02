@@ -30,6 +30,8 @@ const envSchema = z.object({
   BILLING_BKASH_NUMBER: z.string().optional(),
   BILLING_NAGAD_NUMBER: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+  LEAD_ALERT_PHONE: z.string().optional(),
+  SUPPORT_WHATSAPP: z.string().optional(),
 });
 
 export interface AppConfig {
@@ -52,6 +54,12 @@ export interface AppConfig {
   };
   /** Enables /admin when set (>= 12 characters). */
   adminPassword: string | null;
+  leads: {
+    /** Founder's phone, texted when a pilot request comes in. */
+    alertPhone: string | null;
+    /** Number behind the landing page's WhatsApp button. */
+    whatsapp: string | null;
+  };
 }
 
 const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
@@ -121,5 +129,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       nagadNumber: manualNumber('BILLING_NAGAD_NUMBER', e.BILLING_NAGAD_NUMBER),
     },
     adminPassword: e.ADMIN_PASSWORD ?? null,
+    leads: {
+      alertPhone: manualNumber('LEAD_ALERT_PHONE', e.LEAD_ALERT_PHONE),
+      whatsapp: manualNumber('SUPPORT_WHATSAPP', e.SUPPORT_WHATSAPP),
+    },
   };
 }

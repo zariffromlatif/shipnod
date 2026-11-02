@@ -22,6 +22,14 @@ input{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-r
 ul{padding-left:18px;margin:8px 0 0;color:var(--muted);font-size:.93rem}
 .cta{display:inline-block;margin-top:18px;background:var(--accent);color:var(--accent-ink);padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600}
 .note{font-size:.82rem;color:var(--muted);margin-top:10px}
+form .row2{display:grid;gap:0 14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+select{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.checks{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}.checks label{display:flex;align-items:center;gap:6px;margin:0;color:var(--ink);font-size:.95rem}
+.checks input{width:auto}
+button.cta{border:0;font:inherit;font-weight:600;cursor:pointer}
+button.cta{margin-right:8px}
+.cta.wa{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
 </style>
 </head>
 <body>
@@ -29,7 +37,7 @@ ul{padding-left:18px;margin:8px 0 0;color:var(--muted);font-size:.93rem}
   <h1>প্রতিটি ফেরত পার্সেলে টাকা হারানো বন্ধ করুন</h1>
   <p class="lead">Shipnod ক্যাশ-অন-ডেলিভারি অর্ডার পাঠানোর আগেই কাস্টমারের ডেলিভারি রেকর্ড দেখে, SMS-এ অর্ডার কনফার্ম করায়, আর এক ক্লিকে Steadfast, Pathao বা RedX-এ বুক করে।<br>
   <span lang="en">Stop paying for parcels that come back. Check the customer, confirm by SMS, book the courier.</span></p>
-  <a class="cta" href="#contact">১৪ দিন ফ্রি ট্রায়াল নিন</a> <a href="/app/login" style="margin-left:14px">বিক্রেতা লগইন →</a>
+  <a class="cta" href="#pilot">১৪ দিন ফ্রি ট্রায়াল নিন</a> <a href="/app/login" style="margin-left:14px">বিক্রেতা লগইন →</a>
 
   <h2>কীভাবে কাজ করে</h2>
   <div class="grid">
@@ -64,8 +72,29 @@ ul{padding-left:18px;margin:8px 0 0;color:var(--muted);font-size:.93rem}
   </div>
   <p class="note">অতিরিক্ত অর্ডার ৳১.৫/অর্ডার। বাৎসরিক পেমেন্টে ২ মাস ফ্রি। bKash, Nagad ও কার্ডে পেমেন্ট।</p>
 
-  <h2 id="contact">শুরু করুন</h2>
-  <div class="card"><p>১৪ দিনের ফ্রি পাইলট — সেটআপ আমরা করে দেব। <!-- TODO: add WhatsApp number / sign-up form --></p></div>
+  <h2 id="pilot">১৪ দিনের ফ্রি পাইলট নিন</h2>
+  <form class="card" method="post" action="/pilot">
+    <p style="margin-top:0">ফর্মটি পূরণ করুন — ২৪ ঘণ্টার মধ্যে আমরা ফোন করে সেটআপ করে দেব। কোনো কার্ড বা অগ্রিম লাগবে না।</p>
+    <div class="row2">
+      <div><label for="p-name">আপনার নাম</label><input id="p-name" name="name" required maxlength="80" autocomplete="name"></div>
+      <div><label for="p-shop">দোকান / পেজের নাম</label><input id="p-shop" name="shopName" required maxlength="80"></div>
+      <div><label for="p-phone">মোবাইল নম্বর</label><input id="p-phone" name="phone" type="tel" inputmode="tel" required placeholder="01XXXXXXXXX" autocomplete="tel"></div>
+      <div><label for="p-orders">মাসে কতগুলো COD অর্ডার?</label>
+        <select id="p-orders" name="monthlyOrders"><option value="">বেছে নিন</option><option value="<300">৩০০-এর কম</option><option value="300-1000">৩০০–১,০০০</option><option value="1000-3000">১,০০০–৩,০০০</option><option value="3000+">৩,০০০+</option></select></div>
+      <div><label for="p-channel">কোথায় বিক্রি করেন?</label>
+        <select id="p-channel" name="channel"><option value="">বেছে নিন</option><option value="facebook">ফেসবুক পেজ</option><option value="website">ওয়েবসাইট (WooCommerce / Shopify)</option><option value="both">দুটোই</option></select></div>
+    </div>
+    <label>কোন কুরিয়ার ব্যবহার করেন?</label>
+    <div class="checks">
+      <label><input type="checkbox" name="couriers" value="steadfast">Steadfast</label>
+      <label><input type="checkbox" name="couriers" value="pathao">Pathao</label>
+      <label><input type="checkbox" name="couriers" value="redx">RedX</label>
+      <label><input type="checkbox" name="couriers" value="other">অন্যান্য</label>
+    </div>
+    <div class="hp" aria-hidden="true"><label for="p-website">Website</label><input id="p-website" name="website" tabindex="-1" autocomplete="off"></div>
+    <input type="hidden" name="source" id="p-source">
+    <button class="cta" type="submit">পাইলটের জন্য আবেদন করুন</button><!--WHATSAPP-->
+  </form>
 </main>
 <script>
 (function () {
@@ -83,6 +112,11 @@ ul{padding-left:18px;margin:8px 0 0;color:var(--muted);font-size:.93rem}
   }
   ['orders', 'rto', 'cost', 'cut'].forEach(function (id) { document.getElementById(id).addEventListener('input', update); });
   update();
+  // Remember where the visitor came from (?ref=fb-group-x or utm_source) for the pilot request.
+  try {
+    var q = new URLSearchParams(location.search);
+    document.getElementById('p-source').value = (q.get('ref') || q.get('utm_source') || '').slice(0, 60);
+  } catch (e) {}
 })();
 </script>
 </body>

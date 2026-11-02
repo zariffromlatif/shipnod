@@ -4,13 +4,14 @@ import { createApp } from './http/app.js';
 import { buildService } from './main.js';
 
 const config = loadConfig();
-const { store, service, auth, billing, billingRepo, onboarding } = buildService(config);
+const { store, service, auth, billing, billingRepo, onboarding, leads } = buildService(config);
 const app = createApp(
-  { service, auth, billing, billingRepo, onboarding },
+  { service, auth, billing, billingRepo, onboarding, leads },
   {
     publicBaseUrl: config.publicBaseUrl,
     secureCookies: config.nodeEnv === 'production',
     adminPassword: config.adminPassword,
+    supportWhatsapp: config.leads.whatsapp,
   },
 );
 if (!config.adminPassword) console.log('Admin console disabled (set ADMIN_PASSWORD to enable /admin)');

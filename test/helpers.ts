@@ -8,9 +8,13 @@ import { SecretBox } from '../src/lib/crypto.js';
 import { AuthService } from '../src/services/auth.js';
 import { BillingService } from '../src/services/billing.js';
 import { OnboardingService } from '../src/services/onboarding.js';
+import { LeadRepo } from '../src/db/leads-repo.js';
+import { LeadService } from '../src/services/leads.js';
 import { ShipnodService } from '../src/services/shipnod.js';
 
 export const ADMIN_PASSWORD = 'correct-horse-battery-staple';
+export const LEAD_ALERT_PHONE = '01999999999';
+export const SUPPORT_WHATSAPP = '01888888888';
 
 export interface HarnessOptions {
   /** Configure SSLCommerz (default true). */
@@ -19,6 +23,8 @@ export interface HarnessOptions {
   manual?: boolean;
   /** Enable /admin (default true). */
   admin?: boolean;
+  /** Configure the support WhatsApp number (default true). */
+  whatsapp?: boolean;
 }
 
 /**
@@ -84,9 +90,16 @@ export function createHarness(opts: HarnessOptions = {}) {
     now,
   });
   const onboarding = new OnboardingService({ service, billing, sms, publicBaseUrl: 'https://nsc.test' });
+  const leads = new LeadService({ repo: new LeadRepo(store.db), service, sms, publicBaseUrl: 'https://nsc.test', alertPhone: LEAD_ALERT_PHONE, now });
   const app = createApp(
-    { service, auth, billing, billingRepo, onboarding },
-    { publicBaseUrl: 'https://nsc.test', secureCookies: false, adminPassword: opts.admin === false ? null : ADMIN_PASSWORD, now },
+    { service, auth, billing, billingRepo, onboarding, leads },
+    {
+      publicBaseUrl: 'https://nsc.test',
+      secureCookies: false,
+      adminPassword: opts.admin === false ? null : ADMIN_PASSWORD,
+      supportWhatsapp: opts.whatsapp === false ? null : SUPPORT_WHATSAPP,
+      now,
+    },
   );
 
   /** A successful SSLCommerz validation answer for a payment. */
@@ -102,7 +115,7 @@ export function createHarness(opts: HarnessOptions = {}) {
     ...extra,
   });
 
-  return { store, sms, service, auth, billing, billingRepo, onboarding, app, clock, courier, gateway, validPayment };
+  return { store, sms, service, auth, billing, billingRepo, onboarding, leads, app, clock, courier, gateway, validPayment };
 }
 
 /** Cookie-keeping client; picks up the CSRF token from the last HTML page. */

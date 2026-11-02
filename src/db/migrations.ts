@@ -197,4 +197,24 @@ export const MIGRATIONS: readonly string[] = [
     expires_at TEXT NOT NULL
   );
   `,
+  // 4: pilot requests from the landing page.
+  `
+  CREATE TABLE leads (
+    id             TEXT PRIMARY KEY,
+    name           TEXT NOT NULL,
+    shop_name      TEXT NOT NULL,
+    phone          TEXT NOT NULL,
+    monthly_orders TEXT,
+    couriers       TEXT,
+    channel        TEXT,
+    source         TEXT,
+    status         TEXT NOT NULL CHECK (status IN ('new', 'contacted', 'converted', 'lost')),
+    seller_id      TEXT,
+    alerted        INTEGER NOT NULL DEFAULT 0,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
+  );
+  CREATE INDEX leads_status ON leads (status, created_at);
+  CREATE INDEX leads_phone ON leads (phone, created_at);
+  `,
 ];

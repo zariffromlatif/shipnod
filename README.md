@@ -82,7 +82,7 @@ DATABASE_PATH=./data/demo.db npm run dev
 | Settings `/app/settings` | Shop name, SMS language with a cost preview, bKash number and advance fee, auto-booking, risk thresholds (Growth+), courier accounts, webhook URLs, blocklist, plan usage |
 
 ```bash
-npm test          # 115 tests: risk engine, adapters, webhooks, API loop, dashboard, billing
+npm test          # 126 tests: risk engine, adapters, webhooks, API loop, dashboard, billing, admin, leads
 npm run typecheck
 npm run build && npm start
 ```
@@ -140,12 +140,13 @@ Sellers buy prepaid periods at **`/app/billing`**: monthly is 30 days, annual is
 - **Overage:** each extra order is recorded at the moment it happens, against the plan active then, and billed once on the next invoice.
 - **Invoices:** one open invoice per seller, valid for 24 hours, numbered `SN-YYYY-NNNNN`. Paid invoices double as receipts.
 - **Admin console (`/admin`, enabled by `ADMIN_PASSWORD`):**
+  - **লিড (pilot requests):** sellers apply on the landing page (name, shop, phone, monthly orders, couriers, where they sell, and which link they came from via `?ref=`). You get an SMS, then call or WhatsApp them from the list, mark them contacted or lost, or tap **বিক্রেতা বানান** to open the new-seller form already filled in. Spam guards: a hidden trap field, repeat requests merged, alert SMS capped at 20 a day.
   - **+ নতুন বিক্রেতা:** sign up a seller from your phone. Enter name, shop and mobile number, choose a plan and pilot length (Growth, 14 days by default), and they get an SMS with the login link. A WhatsApp button sends the same message if SMS fails.
   - MRR and revenue.
   - Payments waiting for review: approve or reject, and the seller gets an SMS.
   - Every seller's plan status, with "set plan" for comps and extensions.
 - **Pilots:** the admin form, or `npm run seller:create -- --name … --shop … --phone 01… --plan growth --trial-days 14 --welcome`.
-- **Configuration:** `SSLCOMMERZ_*`, `BILLING_BKASH_NUMBER`, `BILLING_NAGAD_NUMBER` and `ADMIN_PASSWORD` in `.env.example`. Leave a payment method unset to hide it.
+- **Configuration:** `SSLCOMMERZ_*`, `BILLING_BKASH_NUMBER`, `BILLING_NAGAD_NUMBER`, `ADMIN_PASSWORD`, `LEAD_ALERT_PHONE` and `SUPPORT_WHATSAPP` in `.env.example`. Leave a payment method unset to hide it.
 
 ## Before going live
 

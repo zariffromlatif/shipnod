@@ -181,6 +181,11 @@ describe('config', () => {
     expect(() => loadConfig({ NODE_ENV: 'test', SSLCOMMERZ_STORE_ID: 'shop' })).toThrow(/SSLCOMMERZ/);
     expect(() => loadConfig({ NODE_ENV: 'test', BILLING_BKASH_NUMBER: '123' })).toThrow(/BILLING_BKASH_NUMBER/);
     expect(() => loadConfig({ NODE_ENV: 'test', ADMIN_PASSWORD: 'short' })).toThrow(/ADMIN_PASSWORD/);
+    expect(loadConfig({ NODE_ENV: 'test', LEAD_ALERT_PHONE: '+8801711111111', SUPPORT_WHATSAPP: '01811111111' }).leads).toEqual({
+      alertPhone: '01711111111',
+      whatsapp: '01811111111',
+    });
+    expect(() => loadConfig({ NODE_ENV: 'test', SUPPORT_WHATSAPP: 'abc' })).toThrow(/SUPPORT_WHATSAPP/);
   });
 
   it('refuses to start production without real secrets', () => {

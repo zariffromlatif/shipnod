@@ -11,7 +11,9 @@ import { subscriptionState } from '../billing/subscription.js';
 import { toE164 } from '../domain/phone.js';
 import type { BillingService } from '../services/billing.js';
 import type { OnboardingService, OnboardResult } from '../services/onboarding.js';
-import { csrfField, dateTime, flash, num, shell, taka, type Html } from './dashboard/ui.js';
+import { LEAD_STATUSES, type Lead, type LeadStatus } from '../db/leads-repo.js';
+import type { LeadService } from '../services/leads.js';
+import { ago, csrfField, dateTime, flash, num, shell, taka, type Html } from './dashboard/ui.js';
 
 /**
  * Founder/admin console at /admin: approve manual bKash/Nagad payments, comp plans for pilots,
@@ -44,7 +46,7 @@ function adminPage(title: string, csrf: string | null, body: Html): Html {
     html`<header class="top"><div class="top-in">
         <a class="brand" href="/admin">Shipnod<small>অ্যাডমিন</small></a>
         ${csrf
-          ? html`<nav aria-label="অ্যাডমিন মেনু"><a href="/admin">ওভারভিউ</a><a href="/admin/sellers/new">+ নতুন বিক্রেতা</a></nav>
+          ? html`<nav aria-label="অ্যাডমিন মেনু"><a href="/admin">ওভারভিউ</a><a href="/admin/leads">লিড</a><a href="/admin/sellers/new">+ নতুন বিক্রেতা</a></nav>
               <form class="inline" method="post" action="/admin/logout">${csrfField(csrf)}<button type="submit">লগআউট</button></form>`
           : ''}
       </div></header>
@@ -69,9 +71,12 @@ export interface AdminDeps {
   billing: BillingService;
   repo: BillingRepo;
   onboarding: OnboardingService;
+  leads: LeadService;
 }
 
 export interface NewSellerValues {
+  /** Set when signing up a seller from a pilot request; the lead is marked converted. */
+  leadId?: string;
   name?: string;
   shopName?: string;
   phone?: string;
@@ -91,10 +96,11 @@ function newSellerView(csrf: string, v: NewSellerValues = {}, error?: string): H
     'নতুন বিক্রেতা',
     csrf,
     html`<h1>নতুন বিক্রেতা</h1>
+      ${v.leadId ? html`<p class="small">পাইলট আবেদন থেকে — যোগ করলে লিডটি "বিক্রেতা হয়েছে" হিসেবে চিহ্নিত হবে।</p>` : ''}
       <p class="muted">বিক্রেতা এই মোবাইল নম্বর দিয়ে SMS কোডে লগইন করবেন — পাসওয়ার্ড লাগবে না।</p>
       ${flash('error', error)}
       <form class="card" method="post" action="/admin/sellers">
-        ${csrfField(csrf)}
+        ${csrfField(csrf)}${v.leadId ? html`<input type="hidden" name="leadId" value="${v.leadId}">` : ''}
         <div class="fields">
           <div><label for="name">মালিকের নাম</label><input id="name" name="name" required maxlength="80" value="${v.name ?? ''}" autocomplete="off"></div>
           <div><label for="shopName">দোকানের নাম (SMS-এ দেখাবে)</label><input id="shopName" name="shopName" required maxlength="60" value="${v.shopName ?? ''}" autocomplete="off"></div>
@@ -155,6 +161,68 @@ function createdView(csrf: string, r: OnboardResult, now: Date): Html {
   );
 }
 
+const ORDERS_TEXT: Record<string, string> = { '<300': '৩০০-এর কম', '300-1000': '৩০০–১,০০০', '1000-3000': '১,০০০–৩,০০০', '3000+': '৩,০০০+' };
+const CHANNEL_TEXT: Record<string, string> = { facebook: 'ফেসবুক পেজ', website: 'ওয়েবসাইট', both: 'ফেসবুক + ওয়েবসাইট' };
+const COURIER_TEXT: Record<string, string> = { steadfast: 'Steadfast', pathao: 'Pathao', redx: 'RedX', other: 'অন্যান্য' };
+const LEAD_STATUS_TEXT: Record<LeadStatus, string> = { new: 'নতুন', contacted: 'যোগাযোগ হয়েছে', converted: 'বিক্রেতা হয়েছে', lost: 'বাদ' };
+
+/** Plan that fits the order volume a lead reported. */
+function suggestedPlan(lead: Lead): string {
+  if (lead.monthlyOrders === '<300') return 'starter';
+  if (lead.monthlyOrders === '3000+') return 'scale';
+  return 'growth';
+}
+
+function leadsView(
+  csrf: string,
+  d: { leads: Lead[]; status: LeadStatus | 'all'; counts: Record<LeadStatus, number>; whatsapp: (l: Lead) => string; now: Date; message?: string },
+): Html {
+  const total = Object.values(d.counts).reduce((a, b) => a + b, 0);
+  const tabs: Array<[LeadStatus | 'all', string, number]> = [
+    ...LEAD_STATUSES.map((s): [LeadStatus, string, number] => [s, LEAD_STATUS_TEXT[s], d.counts[s]]),
+    ['all', 'সব', total],
+  ];
+  const statusButton = (l: Lead, to: LeadStatus, label: string, cls = '') =>
+    html`<form class="inline" method="post" action="/admin/leads/${l.id}">${csrfField(csrf)}<input type="hidden" name="status" value="${to}"><input type="hidden" name="back" value="${d.status}"><button class="${cls}" type="submit" style="margin:0">${label}</button></form>`;
+  return adminPage(
+    'লিড',
+    csrf,
+    html`<h1>পাইলট আবেদন</h1>
+      <p class="muted">ল্যান্ডিং পেজের ফর্ম থেকে আসা আবেদন। ফোন বা WhatsApp করুন, তারপর "বিক্রেতা বানান"।</p>
+      ${flash('ok', d.message)}
+      <nav class="tabs" aria-label="লিডের অবস্থা">${tabs.map(
+        ([key, label, n]) => html`<a href="/admin/leads?status=${key}" ${key === d.status ? raw('aria-current="page"') : ''}>${label} (${num(n)})</a>`,
+      )}</nav>
+      ${d.leads.length === 0
+        ? html`<div class="card"><p class="empty">এখানে কোনো আবেদন নেই।</p></div>`
+        : d.leads.map(
+            (l) => html`<div class="card">
+              <div class="actions" style="justify-content:space-between;align-items:center;margin:0">
+                <h2 style="margin:0">${l.shopName}</h2><span class="chip">${LEAD_STATUS_TEXT[l.status]}</span>
+              </div>
+              <dl class="kv" style="margin-top:10px">
+                <dt>নাম</dt><dd>${l.name}</dd>
+                <dt>মোবাইল</dt><dd><a href="tel:${l.phone}">${l.phone}</a></dd>
+                <dt>অর্ডার/মাস</dt><dd>${l.monthlyOrders ? ORDERS_TEXT[l.monthlyOrders] : '—'}</dd>
+                <dt>বিক্রি</dt><dd>${l.channel ? CHANNEL_TEXT[l.channel] : '—'}</dd>
+                <dt>কুরিয়ার</dt><dd>${l.couriers.length ? l.couriers.map((c) => COURIER_TEXT[c] ?? c).join(', ') : '—'}</dd>
+                ${l.source ? html`<dt>সোর্স</dt><dd><code>${l.source}</code></dd>` : ''}
+                <dt>সময়</dt><dd>${ago(l.createdAt, d.now)}</dd>
+                ${l.sellerId ? html`<dt>বিক্রেতা</dt><dd><code>${l.sellerId}</code></dd>` : ''}
+              </dl>
+              <div class="actions">
+                <a class="btn" href="tel:${l.phone}" style="margin:0">ফোন করুন</a>
+                <a class="btn" href="${d.whatsapp(l)}" target="_blank" rel="noopener" style="margin:0">WhatsApp</a>
+                ${l.status !== 'converted' ? html`<a class="btn primary" href="/admin/sellers/new?lead=${l.id}" style="margin:0">বিক্রেতা বানান</a>` : ''}
+                ${l.status === 'new' ? statusButton(l, 'contacted', 'যোগাযোগ হয়েছে') : ''}
+                ${l.status === 'new' || l.status === 'contacted' ? statusButton(l, 'lost', 'বাদ দিন', 'danger') : ''}
+                ${l.status === 'lost' ? statusButton(l, 'new', 'আবার খুলুন') : ''}
+              </div>
+            </div>`,
+          )}`,
+  );
+}
+
 const ONBOARD_ERRORS: Record<string, string> = {
   invalid_name: 'মালিকের নাম দিন (৮০ অক্ষরের মধ্যে)।',
   invalid_shop: 'দোকানের নাম দিন (৬০ অক্ষরের মধ্যে)।',
@@ -164,7 +232,7 @@ const ONBOARD_ERRORS: Record<string, string> = {
 };
 
 export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv> {
-  const { billing, repo, onboarding } = deps;
+  const { billing, repo, onboarding, leads } = deps;
   const app = new Hono<AdminEnv>();
   const now = opts.now ?? (() => new Date());
   const expected = Buffer.from(sha256Hex(`admin:${opts.password}`), 'hex');
@@ -237,6 +305,7 @@ export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv>
         <div class="grid" style="margin-top:14px">
           ${tile('পেইড বিক্রেতা', num(o.activePaid))}${tile('গত ৩০ দিনের আয়', taka(o.revenue30dBdt))}
           ${tile('গ্রেস পিরিয়ডে', num(o.grace))}${tile('যাচাই বাকি', num(o.pendingReviews))}
+          <a class="tile todo" href="/admin/leads"><p class="tile-label">নতুন পাইলট আবেদন</p><p class="tile-value">${num(leads.counts().new)}</p></a>
         </div>
 
         <div class="card"><h2>যাচাই বাকি পেমেন্ট</h2>
@@ -308,7 +377,46 @@ export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv>
     }
   });
 
-  app.get('/sellers/new', (c) => c.html(newSellerView(c.get('csrf'))));
+  app.get('/sellers/new', (c) => {
+    const leadId = c.req.query('lead');
+    if (!leadId) return c.html(newSellerView(c.get('csrf')));
+    try {
+      const l = leads.get(leadId);
+      return c.html(
+        newSellerView(c.get('csrf'), { leadId: l.id, name: l.name, shopName: l.shopName.slice(0, 60), phone: l.phone, plan: suggestedPlan(l) }),
+      );
+    } catch (err) {
+      if (err instanceof AppError) return c.html(newSellerView(c.get('csrf'), {}, 'লিডটি পাওয়া যায়নি।'), 404);
+      throw err;
+    }
+  });
+
+  app.get('/leads', (c) => {
+    const q = c.req.query('status') ?? 'new';
+    const status = q === 'all' || (LEAD_STATUSES as readonly string[]).includes(q) ? (q as LeadStatus | 'all') : 'new';
+    return c.html(
+      leadsView(c.get('csrf'), {
+        leads: leads.list(status === 'all' ? undefined : status),
+        status,
+        counts: leads.counts(),
+        whatsapp: (l) => leads.whatsappUrl(l),
+        now: now(),
+        message: c.req.query('msg') === 'updated' ? 'আপডেট হয়েছে।' : undefined,
+      }),
+    );
+  });
+
+  app.post('/leads/:id', async (c) => {
+    const form = await c.req.parseBody();
+    const back = typeof form.back === 'string' && /^[a-z]+$/.test(form.back) ? form.back : 'new';
+    try {
+      leads.setStatus(c.req.param('id'), typeof form.status === 'string' ? form.status : '');
+    } catch (err) {
+      if (err instanceof AppError) return c.text(err.message, err.status === 404 ? 404 : 422);
+      throw err;
+    }
+    return c.redirect(`/admin/leads?status=${back}&msg=updated`, 303);
+  });
 
   app.post('/sellers', async (c) => {
     const form = await c.req.parseBody();
@@ -321,6 +429,7 @@ export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv>
       trialDays: str('trialDays'),
       smsLang: str('smsLang'),
       sendWelcome: form.sendWelcome === '1',
+      leadId: str('leadId') || undefined,
     };
     const plan = z.enum(PLAN_IDS).safeParse(values.plan);
     const lang = z.enum(['bn', 'banglish', 'en']).safeParse(values.smsLang);
@@ -336,6 +445,13 @@ export function createAdmin(deps: AdminDeps, opts: AdminOptions): Hono<AdminEnv>
         smsLang: lang.data,
         sendWelcome: values.sendWelcome!,
       });
+      if (values.leadId) {
+        try {
+          leads.markConverted(values.leadId, result.seller.id);
+        } catch {
+          // The lead may have been deleted meanwhile; the seller exists either way.
+        }
+      }
       // The page carries a one-time API key: keep it out of caches and browser history.
       c.header('Cache-Control', 'no-store');
       return c.html(createdView(c.get('csrf'), result, now()));

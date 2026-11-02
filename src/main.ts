@@ -7,6 +7,8 @@ import { BillingRepo } from './db/billing-repo.js';
 import { AuthService } from './services/auth.js';
 import { BillingService } from './services/billing.js';
 import { OnboardingService } from './services/onboarding.js';
+import { LeadRepo } from './db/leads-repo.js';
+import { LeadService } from './services/leads.js';
 import { ShipnodService } from './services/shipnod.js';
 
 /** Wires the object graph from config. Shared by the server and CLI scripts. */
@@ -43,5 +45,12 @@ export function buildService(config: AppConfig, overrides: { sms?: SmsProvider; 
     manual: { bkash: config.billing.bkashNumber, nagad: config.billing.nagadNumber },
   });
   const onboarding = new OnboardingService({ service, billing, sms, publicBaseUrl: config.publicBaseUrl });
-  return { store, sms, service, auth, billing, billingRepo, onboarding };
+  const leads = new LeadService({
+    repo: new LeadRepo(store.db),
+    service,
+    sms,
+    publicBaseUrl: config.publicBaseUrl,
+    alertPhone: config.leads.alertPhone,
+  });
+  return { store, sms, service, auth, billing, billingRepo, onboarding, leads };
 }
